@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Título más descriptivo en español -->
+  <title>XocoBalls - Experiencia Interactiva (Optimizada)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden; /* Evita barras de scroll */
+      height: 100vh;   /* Ocupa toda la altura de la ventana */
+      width: 100vw;    /* Ocupa todo el ancho de la ventana */
+      background-color: #000; /* Fondo negro por defecto */
+      color: #fff;
+      position: relative; /* Necesario para posicionar elementos hijos absolutos */
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0; /* Detrás de la UI */
+      /* Cursor inicial para indicar interactividad */
+      cursor: grab;
+    }
+
+    .ui-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      z-index: 10; /* Encima del canvas */
+      padding: 20px;
+      background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%);
+      transition: transform 0.3s ease;
+      transform: translateY(75%); /* Oculto parcialmente por defecto */
+    }
+
+    .ui-container:hover,
+    .ui-container:focus-within /* Mantener abierto si un control tiene foco */ {
+      transform: translateY(0); /* Mostrar completamente al pasar el mouse o interactuar */
+    }
+
+    .ui-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      cursor: pointer; /* Indica que se puede interactuar con la cabecera */
+    }
+
+    .ui-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .controls-hint {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .arrow-icon {
+      width: 20px;
+      height: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .ui-container:hover .arrow-icon,
+    .ui-container:focus-within .arrow-icon {
+      transform: rotate(180deg); /* Gira la flecha al mostrar */
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1; /* Ocupa espacio disponible */
+      min-width: 200px; /* Ancho mínimo para evitar que se aplasten */
+      gap: 8px;
+    }
+
+    .control-group-inline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+       flex: 1; /* Ocupa espacio disponible */
+       min-width: 150px; /* Ajustar si es necesario */
+       margin-bottom: 8px; /* Espacio si se envuelven */
+    }
+
+    .control-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: space-between;
+      white-space: nowrap; /* Evitar que el texto de la etiqueta se rompa */
+      margin-right: 8px; /* Espacio entre etiqueta y control/valor */
+    }
+
+     .control-label span { /* Para el valor en la misma línea */
+        margin-left: auto; /* Empuja el valor a la derecha */
+     }
+
+    .control-value {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.75rem;
+      margin-left: 4px; /* Pequeño espacio para el valor del slider */
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      appearance: none; /* Estilos personalizados */
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      outline: none;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #3b82f6; /* Color azul */
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border: none;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .slider:hover::-webkit-slider-thumb {
+      transform: scale(1.2); /* Efecto hover en el pulgar */
+    }
+
+    .slider:hover::-moz-range-thumb {
+      transform: scale(1.2);
+    }
+    .slider:active::-webkit-slider-thumb {
+        transform: scale(1.3); /* Efecto al arrastrar */
+        background: #2563eb;
+    }
+    .slider:active::-moz-range-thumb {
+        transform: scale(1.3);
+        background: #2563eb;
+    }
+
+    .color-picker {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(255, 255, 255, 0.3); /* Borde sutil */
+      border-radius: 50%;
+      cursor: pointer;
+      background: transparent; /* El fondo será el color seleccionado */
+      padding: 0; /* Eliminar padding interno */
+      overflow: hidden; /* Asegurar que el swatch no se salga */
+      flex-shrink: 0; /* Evitar que se encoja */
+    }
+
+    .color-picker::-webkit-color-swatch-wrapper {
+      padding: 0; /* Eliminar padding interno en Chrome */
+    }
+
+    .color-picker::-webkit-color-swatch {
+      border: none; /* Sin borde interno */
+      border-radius: 50%;
+    }
+
+    .color-picker::-moz-color-swatch {
+      border: none;
+      border-radius: 50%;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap; /* Para que los botones se ajusten en pantallas pequeñas */
+      gap: 10px; /* Un poco más de espacio entre botones */
+      margin-top: 20px; /* Más espacio antes de los botones */
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex; /* Para alinear icono y texto */
+      align-items: center;
+      justify-content: center; /* Centrar contenido */
+      gap: 8px;
+      color: white;
+      outline: none; /* Quitar outline por defecto */
+      flex-grow: 1; /* Permite que los botones crezcan */
+      flex-basis: 150px; /* Base para el wrap */
+    }
+    .btn:focus-visible { /* Estilo de foco accesible */
+       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0; /* Evitar que el icono se encoja */
+    }
+
+    .btn-blue { background-color: #3b82f6; }
+    .btn-blue:hover { background-color: #2563eb; }
+
+    .btn-gray { background-color: #6b7280; }
+    .btn-gray:hover { background-color: #4b5563; }
+
+    .btn-green { background-color: #10b981; }
+    .btn-green:hover { background-color: #059669; }
+
+    .btn-green-inactive { background-color: #18181b; color: #71717a; }
+    .btn-green-inactive:hover { background-color: #27272a; }
+
+    .btn-purple { background-color: #8b5cf6; }
+    .btn-purple:hover { background-color: #7c3aed; }
+
+    /* (Se podrían añadir más estilos de botón si fuera necesario) */
+
+    .info-badge {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 8px 16px;
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      z-index: 20;
+      color: rgba(255, 255, 255, 0.9);
+      pointer-events: none; /* No interfiere con clics */
+      opacity: 0;
+      transform: translateY(-10px); /* Efecto de aparición */
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .info-badge.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+       .ui-container {
+        padding: 16px;
+        transform: translateY(85%); /* Ocultar un poco más en móvil */
+      }
+      .ui-title {
+        font-size: 1.25rem;
+      }
+       .controls-hint span {
+        /* Podríamos mantener el texto o cambiarlo a algo más corto */
+         font-size: 0.8rem;
+         /* display: none; */ /* Descomentar si se quiere ocultar el texto */
+      }
+      .control-group {
+        min-width: 150px; /* Ajuste para móviles */
+      }
+      .control-group-inline {
+        min-width: 130px;
+      }
+      .btn {
+        flex-basis: 120px; /* Ajustar base de botones en móvil */
+        padding: 8px 12px; /* Menos padding en móvil */
+      }
+    }
+
+    /* Fullscreen button styles */
+    .fullscreen-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 20;
+      background-color: rgba(0, 0, 0, 0.6);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+      outline: none; /* Quitar outline por defecto */
+    }
+    .fullscreen-btn:focus-visible { /* Estilo de foco accesible */
+       box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+    }
+
+    .fullscreen-btn:hover {
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .fullscreen-icon {
+      width: 20px;
+      height: 20px;
+      fill: white;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="metaballsCanvas"></canvas>
+
+  <button id="fullscreenBtn" class="fullscreen-btn" title="Pantalla Completa">
+    <!-- Icono SVG para Pantalla Completa -->
+    <svg class="fullscreen-icon" id="fullscreenIconOpen" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+    </svg>
+     <!-- Icono SVG para Salir de Pantalla Completa (inicialmente oculto) -->
+    <svg class="fullscreen-icon" id="fullscreenIconExit" style="display: none;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+    </svg>
+  </button>
+
+  <div id="infoBadge" class="info-badge">Configuración actualizada</div>
+
+  <div class="ui-container" tabindex="-1"> <!-- tabindex para focus-within -->
+    <div class="ui-header">
+      <h2 class="ui-title">Controles Xocoballs</h2> <!-- Título UI más corto -->
+      <div class="controls-hint">
+        <!-- Texto actualizado para reflejar hover y swipe -->
+        <span>Pasa el cursor o desliza</span>
+        <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 15L12 9L18 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <div class="control-group">
+        <div class="control-label">
+          <label for="speedSlider">Velocidad</label>
+          <span class="control-value" id="speedValue">6.0x</span> <!-- Valor inicial UI -->
+        </div>
+        <!-- ****** VALOR INICIAL CAMBIADO ****** -->
+        <input type="range" id="speedSlider" class="slider" min="0.1" max="6.0" step="0.1" value="6.0" aria-labelledby="speedValue">
+        <!-- ********************************** -->
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <label for="thresholdSlider">Densidad</label>
+          <span class="control-value" id="densityValue">Muy Baja</span> <!-- Valor inicial UI -->
+        </div>
+        <!-- ****** VALOR INICIAL CAMBIADO ****** -->
+        <input type="range" id="thresholdSlider" class="slider" min="0.75" max="1.25" step="0.05" value="1.25" aria-labelledby="densityValue">
+         <!-- ********************************** -->
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <div class="control-group">
+        <div class="control-label">
+          <label for="radiusSlider">Tamaño</label> <!-- Más corto -->
+          <span class="control-value" id="radiusValue">1.0x</span>
+        </div>
+        <input type="range" id="radiusSlider" class="slider" min="0.5" max="2.0" step="0.1" value="1.0" aria-labelledby="radiusValue">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <label for="qualitySlider">Calidad</label> <!-- Más corto -->
+          <span class="control-value" id="qualityValue">Baja (1x)</span> <!-- Valor inicial UI -->
+        </div>
+        <!-- ****** VALOR INICIAL CAMBIADO ****** -->
+        <input type="range" id="qualitySlider" class="slider" min="1" max="4" step="1" value="1" aria-labelledby="qualityValue">
+        <!-- ********************************** -->
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <div class="control-group-inline">
+        <label for="bgColorPicker" class="control-label">Fondo</label>
+        <input type="color" id="bgColorPicker" class="color-picker" value="#000000" title="Color de fondo">
+      </div>
+
+      <div class="control-group-inline">
+        <label for="startColorPicker" class="control-label">Inicio</label>
+        <input type="color" id="startColorPicker" class="color-picker" value="#32c8ff" title="Color inicial del gradiente">
+      </div>
+
+      <div class="control-group-inline">
+        <label for="endColorPicker" class="control-label">Final</label>
+        <input type="color" id="endColorPicker" class="color-picker" value="#ff32c8" title="Color final del gradiente">
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button id="addBallBtn" class="btn btn-blue" title="Añadir una nueva esfera aleatoria">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 6V12M12 12V18M12 12H18M12 12H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Añadir
+      </button>
+
+      <button id="resetBtn" class="btn btn-gray" title="Restablecer esferas a la posición inicial">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 4V10H7M23 20V14H17M3.51 9C5.84 4.35 11.15 2.11 16.5 4.44C20.2 6.05 22.5 9.72 22.5 13.72M20.49 15C18.16 19.65 12.85 21.89 7.5 19.56C3.8 17.95 1.5 14.28 1.5 10.28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Reiniciar
+      </button>
+
+      <!-- El contenido del botón se actualiza desde JS -->
+      <button id="toggleAnimationBtn" class="btn btn-green" title="Pausar o reanudar el movimiento">
+        Pausar
+      </button>
+
+      <button id="randomColorsBtn" class="btn btn-purple" title="Generar colores de gradiente aleatorios">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.364 5.63604C19.9261 7.19815 20.8787 9.28986 20.8787 11.5C20.8787 13.7101 19.9261 15.8019 18.364 17.364M15.5355 8.46447C16.3166 9.24552 16.7429 10.3359 16.7429 11.5C16.7429 12.6641 16.3166 13.7545 15.5355 14.5355M3 11.5C3 7.02166 6.10691 3.35266 10.1213 2.63604M6.63604 2.63604C8.19815 1.07393 10.2899 0.121338 12.5 0.121338C17.7467 0.121338 22 4.37464 22 9.62134V10.5M22 13.5V14.3787C22 19.6254 17.7467 23.8787 12.5 23.8787C10.2899 23.8787 8.19815 22.9261 6.63604 21.364L3 17.7279" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16.0503 5.94975L18.1716 3.82843" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 11.5L6.63604 15.136" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Aleatorio
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // --- Estado Global ---
+    const state = {
+      balls: [],
+      draggedBallId: null,
+      animate: true,
+      // --- VALORES INICIALES MODIFICADOS ---
+      threshold: 1.25,     // 1.25 corresponde a "Muy Baja"
+      smoothFactor: 1,     // 1 corresponde a "Baja (1x)"
+      speedFactor: 6.0,    // Velocidad inicial 6.0
+      // --- FIN VALORES MODIFICADOS ---
+      radiusFactor: 1.0,
+      backgroundColor: "#000000",
+      gradient: {
+        start: hexToRgb("#32c8ff"),
+        end: hexToRgb("#ff32c8")
+      },
+      animationId: null,
+      infoTimeoutId: null,
+      isDragging: false,
+      lastTimestamp: 0
+    };
+
+    // --- Referencias a Elementos del DOM ---
+    const canvas = document.getElementById('metaballsCanvas');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const fullscreenIconOpen = document.getElementById('fullscreenIconOpen');
+    const fullscreenIconExit = document.getElementById('fullscreenIconExit');
+    const toggleAnimationBtn = document.getElementById('toggleAnimationBtn');
+    const infoBadge = document.getElementById('infoBadge');
+
+    // Sliders y sus valores asociados
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+    const thresholdSlider = document.getElementById('thresholdSlider');
+    const densityValue = document.getElementById('densityValue');
+    const radiusSlider = document.getElementById('radiusSlider');
+    const radiusValue = document.getElementById('radiusValue');
+    const qualitySlider = document.getElementById('qualitySlider');
+    const qualityValue = document.getElementById('qualityValue');
+
+    // Selectores de Color
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    const startColorPicker = document.getElementById('startColorPicker');
+    const endColorPicker = document.getElementById('endColorPicker');
+
+    // Botones de Acción
+    const addBallBtn = document.getElementById('addBallBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const randomColorsBtn = document.getElementById('randomColorsBtn');
+
+    // Canvas Offscreen para Renderizado Suave y de Alta Calidad
+    const offscreenCanvas = document.createElement('canvas');
+
+    // --- Constantes Configurables ---
+    const INITIAL_BALL_COUNT_FACTOR = 150 * 150; // Área por bola aprox. para cálculo inicial
+    const MIN_INITIAL_BALLS = 3;
+    const MAX_INITIAL_BALLS = 6;
+    const BASE_BALL_RADIUS_MIN = 30;
+    const BASE_BALL_RADIUS_MAX = 45;
+    const INITIAL_VELOCITY_RANGE = 1.2;
+    const MAX_DELTA_TIME_MS = 50; // Límite para evitar saltos grandes (equivale a 20 FPS min)
+    const TARGET_FRAME_TIME_MS = 1000 / 60; // Aprox 16.67 ms para 60 FPS
+    const DRAG_SENSITIVITY_MULTIPLIER = 1.5; // Factor para aumentar el área de "agarre" de la bola
+    const INFO_BADGE_DURATION_MS = 2000; // Duración del mensaje de información
+
+    // --- Inicialización ---
+    function init() {
+      resizeCanvas(); // Ajustar tamaño inicial del canvas (visible y offscreen)
+      createInitialBalls(); // Crear las bolas iniciales
+      setupEventListeners(); // Configurar todos los listeners de eventos
+      updateAllUILabels(); // Establecer textos iniciales en la UI (leerá los valores modificados de 'state')
+      updateToggleButtonIcon(); // Asegurar icono correcto en botón Pausa/Reanudar
+      startAnimation(); // Iniciar el bucle de animación
+    }
+
+    // --- Creación de Bolas ---
+    function createInitialBalls() {
+      const width = canvas.width;
+      const height = canvas.height;
+      // Calcula un número inicial de bolas basado en el área, con límites
+      const numBalls = Math.max(MIN_INITIAL_BALLS, Math.min(MAX_INITIAL_BALLS, Math.floor((width * height) / INITIAL_BALL_COUNT_FACTOR)));
+
+      state.balls = []; // Limpiar bolas existentes si las hubiera
+      for (let i = 0; i < numBalls; i++) {
+         const radius = BASE_BALL_RADIUS_MIN + Math.random() * (BASE_BALL_RADIUS_MAX - BASE_BALL_RADIUS_MIN);
+         // Posición aleatoria asegurando que no nazcan pegadas al borde
+         const x = radius + Math.random() * (width - radius * 2);
+         const y = radius + Math.random() * (height - radius * 2);
+         state.balls.push(createBall(x, y, radius));
+      }
+    }
+
+    function createBall(x, y, radius) {
+      return {
+        id: Date.now() + Math.random(), // ID pseudo-único para identificación
+        x: x,
+        y: y,
+        radius: radius, // Radio base (se multiplicará por radiusFactor)
+        vx: (Math.random() - 0.5) * INITIAL_VELOCITY_RANGE, // Velocidad inicial aleatoria (-0.6 a +0.6 aprox)
+        vy: (Math.random() - 0.5) * INITIAL_VELOCITY_RANGE
+      };
+    }
+
+    // --- Manejo del Canvas y Redimensionado ---
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      // Actualizar también el canvas offscreen con el nuevo tamaño y factor de calidad
+      offscreenCanvas.width = canvas.width * state.smoothFactor;
+      offscreenCanvas.height = canvas.height * state.smoothFactor;
+
+      // Asegurarse de que las bolas existentes sigan dentro de los límites tras redimensionar
+       ensureBallsInBounds();
+    }
+
+    function ensureBallsInBounds() {
+        const width = canvas.width;
+        const height = canvas.height;
+        state.balls.forEach(ball => {
+             // Usar el radio ajustado actual para los límites
+             const adjustedRadius = ball.radius * state.radiusFactor;
+             ball.x = Math.max(adjustedRadius, Math.min(width - adjustedRadius, ball.x));
+             ball.y = Math.max(adjustedRadius, Math.min(height - adjustedRadius, ball.y));
+             // Opcional: Podríamos también ajustar la velocidad si chocan justo al redimensionar,
+             // pero por simplicidad, solo corregimos la posición.
+        });
+    }
+
+    // --- Bucle Principal de Animación (Controlado por requestAnimationFrame) ---
+    function updateAnimation(timestamp) { // timestamp es proporcionado por requestAnimationFrame
+      if (!canvas) return; // Medida de seguridad por si el canvas desaparece
+
+      // --- Calcular Delta Time ---
+      // Inicializar lastTimestamp en el primer frame válido
+      if (!state.lastTimestamp) {
+          state.lastTimestamp = timestamp;
+      }
+      // Calcular tiempo transcurrido desde el último frame (en milisegundos)
+      let deltaTime = timestamp - state.lastTimestamp;
+      state.lastTimestamp = timestamp; // Guardar timestamp actual para el siguiente cálculo
+
+      // Limitar deltaTime máximo para evitar saltos bruscos si la pestaña estuvo inactiva mucho tiempo
+      if (deltaTime > MAX_DELTA_TIME_MS) {
+          deltaTime = MAX_DELTA_TIME_MS; // Usar el límite máximo en lugar del valor real
+      }
+      // Normalizar deltaTime: dt será ~1.0 si el frame rate es 60fps, <1 si es más rápido, >1 si es más lento
+      const dt = deltaTime / TARGET_FRAME_TIME_MS;
+      // --- Fin Delta Time ---
+
+      const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Contexto del canvas visible
+      const offCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true }); // Contexto del canvas oculto (offscreen)
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const offWidth = offscreenCanvas.width;
+      const offHeight = offscreenCanvas.height;
+
+      // 1. Limpiar canvas VISIBLE con el color de fondo seleccionado
+      ctx.fillStyle = state.backgroundColor;
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Limpiar canvas OFFSCREEN (hacerlo transparente)
+      offCtx.clearRect(0, 0, offWidth, offHeight);
+
+      // 3. Actualizar posiciones de las bolas SI la animación está activa
+      if (state.animate) {
+        // Pasar dt para que el movimiento sea independiente del frame rate
+        updateBallPositions(width, height, dt);
+      }
+
+      // 4. Dibujar las metaballs en el canvas OFFSCREEN (alta resolución)
+      // Esta función es la más costosa computacionalmente
+      drawMetaballsHiRes(offCtx, offWidth, offHeight);
+
+      // 5. Dibujar el contenido del canvas OFFSCREEN en el canvas VISIBLE
+      // Esto escala la imagen de alta resolución a la resolución de la pantalla,
+      // aplicando antialiasing (suavizado) para un mejor aspecto.
+      ctx.save(); // Guardar estado del contexto (opcional pero buena práctica)
+      ctx.imageSmoothingEnabled = true; // Activar suavizado
+      ctx.imageSmoothingQuality = 'high'; // Solicitar la mejor calidad de suavizado posible
+      ctx.drawImage(
+        offscreenCanvas,    // Imagen fuente (nuestro canvas offscreen)
+        0, 0, offWidth, offHeight, // Área fuente (todo el offscreen)
+        0, 0, width, height       // Área destino (todo el canvas visible)
+      );
+      ctx.restore(); // Restaurar estado del contexto
+
+      // 6. Solicitar al navegador que llame a updateAnimation de nuevo en el próximo frame
+      state.animationId = requestAnimationFrame(updateAnimation);
+    }
+
+    // --- Actualización de Posición de Bolas ---
+    function updateBallPositions(width, height, dt) { // Recibe dt (delta time normalizado)
+      state.balls.forEach(ball => {
+        // Si la bola está siendo arrastrada por el usuario, no aplicar física
+        if (ball.id === state.draggedBallId) return;
+
+        // Calcular nueva posición tentativa aplicando velocidad, factor de velocidad y dt
+        let newX = ball.x + ball.vx * state.speedFactor * dt;
+        let newY = ball.y + ball.vy * state.speedFactor * dt;
+
+        // Obtener el radio ajustado por el slider de tamaño
+        const adjustedRadius = ball.radius * state.radiusFactor;
+
+        // Detección de colisiones con los bordes (usando radio ajustado)
+        // Eje X
+        if (newX < adjustedRadius || newX > width - adjustedRadius) {
+          ball.vx *= -1; // Invertir velocidad horizontal
+          // Recalcular posición X con la velocidad invertida para evitar que se quede "pegada" al borde
+          newX = ball.x + ball.vx * state.speedFactor * dt;
+          // Asegurar que, incluso después del rebote, quede dentro de los límites (importante si dt es grande)
+          newX = Math.max(adjustedRadius, Math.min(width - adjustedRadius, newX));
+        }
+
+        // Eje Y
+        if (newY < adjustedRadius || newY > height - adjustedRadius) {
+          ball.vy *= -1; // Invertir velocidad vertical
+          // Recalcular posición Y con la velocidad invertida
+          newY = ball.y + ball.vy * state.speedFactor * dt;
+          // Asegurar que quede dentro de los límites
+          newY = Math.max(adjustedRadius, Math.min(height - adjustedRadius, newY));
+        }
+
+        // Actualizar la posición final de la bola
+        ball.x = newX;
+        ball.y = newY;
+      });
+    }
+
+    // --- Dibujo de Metaballs (Alta Resolución en Canvas Offscreen) ---
+    // Esta es la parte central del efecto visual. Calcula el color de cada píxel
+    // basándose en la influencia combinada de todas las bolas cercanas.
+    function drawMetaballsHiRes(ctx, width, height) {
+      // Obtener acceso directo a los datos de píxeles del canvas offscreen
+      const imageData = ctx.createImageData(width, height);
+      const data = imageData.data; // Array plano [R, G, B, A, R, G, B, A, ...]
+
+      // Precalcular valores fuera del bucle para optimizar
+      const smoothFactor = state.smoothFactor; // Factor de calidad (resolución offscreen)
+      const threshold = state.threshold;       // Umbral de fusión
+      const startR = state.gradient.start.r;
+      const startG = state.gradient.start.g;
+      const startB = state.gradient.start.b;
+      const deltaR = state.gradient.end.r - startR; // Diferencia para interpolación
+      const deltaG = state.gradient.end.g - startG;
+      const deltaB = state.gradient.end.b - startB;
+      const radiusFactor = state.radiusFactor;   // Factor de tamaño global
+      const balls = state.balls;
+      const numBalls = balls.length;
+      const INFLUENCE_OFFSET = 0.1; // Pequeño offset para evitar división por cero
+      const GRADIENT_START_OFFSET = 0.85; // Dónde empieza el gradiente respecto al umbral
+      const GRADIENT_RANGE_FACTOR = 0.5; // Factor para mapear intensidad a [0, 1] para el gradiente
+      const GLOW_THRESHOLD = 1.5; // Intensidad a partir de la cual empieza el brillo
+      const GLOW_RANGE_FACTOR = 0.5; // Factor para mapear intensidad a [0, 1] para el brillo
+      const GLOW_INTENSITY_FACTOR = 75; // Cuánto brillo añadir (por canal)
+
+      // Iterar sobre cada píxel del canvas offscreen
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          // Convertir coordenadas del píxel offscreen a coordenadas del canvas visible
+          const visibleX = x / smoothFactor;
+          const visibleY = y / smoothFactor;
+
+          // Calcular la suma de influencias de TODAS las bolas en este punto (visibleX, visibleY)
+          let sum = 0;
+          for (let i = 0; i < numBalls; i++) {
+             const ball = balls[i];
+             const dx = visibleX - ball.x;
+             const dy = visibleY - ball.y;
+             // Usamos distancia al cuadrado para evitar la costosa operación sqrt()
+             const distSq = dx * dx + dy * dy;
+             const adjustedRadius = ball.radius * radiusFactor;
+             const adjustedRadiusSq = adjustedRadius * adjustedRadius;
+
+             // Fórmula de influencia: R^2 / (dist^2 + offset)
+             // Cuanto más cerca está el píxel de la bola, mayor es la influencia.
+             sum += adjustedRadiusSq / (distSq + INFLUENCE_OFFSET);
+          }
+
+          // Determinar si el píxel está "dentro" de la metaball (si la suma de influencias supera el umbral)
+          const isInside = sum > threshold;
+
+          let r = 0, g = 0, b = 0, a = 0; // Color por defecto: transparente
+
+          if (isInside) {
+            // Calcular intensidad normalizada para el gradiente y el brillo
+            // Restamos un offset para que el color empiece un poco antes del borde exacto definido por 'threshold'
+            const intensityRaw = sum / threshold - GRADIENT_START_OFFSET;
+             // Limitamos la intensidad máxima (afecta principalmente al brillo)
+            const intensity = Math.min(intensityRaw, 2.0);
+
+            // Calcular factor 't' de interpolación para el gradiente (mapeado a [0, 1])
+            const t = Math.max(0, Math.min(1, intensity * GRADIENT_RANGE_FACTOR));
+
+            // Interpolar linealmente entre los colores de inicio y fin del gradiente
+            r = Math.round(startR + deltaR * t);
+            g = Math.round(startG + deltaG * t);
+            b = Math.round(startB + deltaB * t);
+
+            // Añadir efecto de brillo en puntos de muy alta intensidad (cerca del centro de las bolas)
+            if (intensity > GLOW_THRESHOLD) {
+              // Calcular factor de brillo basado en cuánto excede el umbral de brillo (mapeado a [0, 1])
+              const glowFactor = (intensity - GLOW_THRESHOLD) * GLOW_RANGE_FACTOR;
+              // Aumentar el brillo de los componentes RGB, limitado a 255
+              r = Math.min(255, r + Math.round(glowFactor * GLOW_INTENSITY_FACTOR));
+              g = Math.min(255, g + Math.round(glowFactor * GLOW_INTENSITY_FACTOR));
+              b = Math.min(255, b + Math.round(glowFactor * GLOW_INTENSITY_FACTOR));
+            }
+
+            a = 255; // Hacer el píxel completamente opaco
+          }
+
+          // Calcular el índice del primer componente (R) de este píxel en el array 'data'
+          const pixelIndex = (y * width + x) * 4;
+          // Asignar los valores RGBA calculados al array de datos de la imagen
+          data[pixelIndex]     = r;
+          data[pixelIndex + 1] = g;
+          data[pixelIndex + 2] = b;
+          data[pixelIndex + 3] = a;
+        }
+      }
+
+      // Volcar los datos de píxeles modificados de vuelta al contexto del canvas offscreen
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    // --- Manejo de Interacción del Usuario (Arrastrar Bolas) ---
+    function handleInteractionStart(e) {
+      // Prevenir comportamiento por defecto (scroll en táctil, selección de texto en mouse)
+      if (e.cancelable) e.preventDefault();
+      const pos = getEventPosition(e);
+      if (!pos) return; // Si no podemos obtener posición, salir
+
+      findAndSetDraggedBall(pos.x, pos.y); // Buscar si se hizo clic/tap sobre una bola
+      if (state.draggedBallId !== null) {
+          state.isDragging = true; // Marcar que estamos arrastrando
+          canvas.style.cursor = 'grabbing'; // Cambiar cursor a "mano cerrada"
+      }
+    }
+
+    function handleInteractionMove(e) {
+      // Solo procesar si estamos activamente arrastrando una bola
+      if (!state.isDragging || state.draggedBallId === null) return;
+      if (e.cancelable) e.preventDefault(); // Prevenir scroll durante el arrastre
+
+      const pos = getEventPosition(e);
+       if (!pos) return;
+
+      updateDraggedBallPosition(pos.x, pos.y); // Actualizar la posición de la bola arrastrada
+    }
+
+    function handleInteractionEnd() {
+      // Si estábamos arrastrando, limpiar el estado
+      if (state.isDragging) {
+          state.isDragging = false;
+          state.draggedBallId = null; // Ya no hay bola arrastrada
+          canvas.style.cursor = 'grab'; // Restaurar cursor a "mano abierta"
+      }
+    }
+
+    // Función auxiliar para obtener coordenadas (x, y) relativas al canvas
+    // a partir de un evento de mouse o táctil.
+    function getEventPosition(e) {
+        const rect = canvas.getBoundingClientRect(); // Posición y tamaño del canvas en la ventana
+        let clientX, clientY;
+
+        if (e.touches && e.touches.length > 0) {
+            // Evento táctil (touchstart, touchmove)
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            // Evento táctil (touchend) - usar changedTouches
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+        } else if (e.clientX !== undefined) {
+            // Evento de ratón (mousedown, mousemove, mouseup)
+            clientX = e.clientX;
+            clientY = e.clientY;
+        } else {
+            console.warn("No se pudo determinar la posición del evento.");
+            return null; // No se pudo obtener la posición
+        }
+
+        // Calcular coordenadas relativas al canvas
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    // Busca la bola más cercana al punto (x, y) y si está suficientemente cerca,
+    // la marca como la bola a arrastrar (state.draggedBallId).
+    function findAndSetDraggedBall(x, y) {
+      let closestBallId = null;
+      let minDistanceSq = Infinity; // Usar distancia al cuadrado para eficiencia (evita sqrt)
+
+      state.balls.forEach(ball => {
+        const dx = x - ball.x;
+        const dy = y - ball.y;
+        const distanceSq = dx * dx + dy * dy;
+        const adjustedRadius = ball.radius * state.radiusFactor;
+        // Área de "agarre" es un poco mayor que el radio visible
+        const grabRadius = adjustedRadius * DRAG_SENSITIVITY_MULTIPLIER;
+        const grabRadiusSq = grabRadius * grabRadius;
+
+        // Si el punto está dentro del área de agarre y es la más cercana encontrada hasta ahora
+        if (distanceSq < grabRadiusSq && distanceSq < minDistanceSq) {
+          minDistanceSq = distanceSq;
+          closestBallId = ball.id;
+        }
+      });
+
+      state.draggedBallId = closestBallId; // Puede ser null si no se encontró ninguna
+    }
+
+    // Actualiza la posición de la bola que está siendo arrastrada (identificada por state.draggedBallId)
+    // a las nuevas coordenadas (x, y), asegurando que permanezca dentro de los límites del canvas.
+    function updateDraggedBallPosition(x, y) {
+        const ball = state.balls.find(b => b.id === state.draggedBallId);
+        if (ball) {
+            const width = canvas.width;
+            const height = canvas.height;
+            const adjustedRadius = ball.radius * state.radiusFactor;
+
+            // Limitar la nueva posición para que la bola no se salga del canvas
+            ball.x = Math.max(adjustedRadius, Math.min(width - adjustedRadius, x));
+            ball.y = Math.max(adjustedRadius, Math.min(height - adjustedRadius, y));
+            // Importante: Al arrastrar, no actualizamos vx, vy. La bola detiene su movimiento "físico".
+        }
+    }
+
+    // --- Funciones de los Controles de UI ---
+
+    function addBall() {
+      if (!canvas) return;
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // Crear bola con tamaño y posición aleatorios dentro del canvas
+      const radius = BASE_BALL_RADIUS_MIN + Math.random() * (BASE_BALL_RADIUS_MAX - BASE_BALL_RADIUS_MIN);
+      const adjustedRadius = radius * state.radiusFactor; // Usar factor actual para posicionar
+      const x = adjustedRadius + Math.random() * (width - adjustedRadius * 2);
+      const y = adjustedRadius + Math.random() * (height - adjustedRadius * 2);
+
+      state.balls.push(createBall(x, y, radius)); // Añadir la nueva bola al estado
+      showInfoBadge('Esfera añadida');
+    }
+
+    function resetBalls() {
+      createInitialBalls(); // Recrear el conjunto inicial de bolas
+      showInfoBadge('Esferas reiniciadas');
+    }
+
+    function toggleAnimation() {
+      state.animate = !state.animate; // Invertir el estado de animación
+      // Si reanudamos la animación, resetear lastTimestamp para evitar un salto enorme
+      // debido al tiempo que estuvo pausada.
+      if (state.animate) {
+          state.lastTimestamp = 0; // Forzará la inicialización en el próximo frame
+      }
+      updateToggleButtonIcon(); // Actualizar icono y texto del botón Pausa/Reanudar
+      showInfoBadge(state.animate ? 'Movimiento reanudado' : 'Movimiento pausado');
+    }
+
+    // Actualiza el icono y texto del botón de Pausa/Reanudar según el estado 'animate'
+    function updateToggleButtonIcon() {
+        let iconSvg;
+        let text;
+        let title;
+        let addClass;
+        let removeClass;
+
+        if (state.animate) {
+            // Estado: Animación activa -> Mostrar botón para Pausar
+            iconSvg = `
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 15V9M14 15V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
+                </svg>`;
+            text = 'Pausar';
+            title = "Pausar el movimiento";
+            addClass = 'btn-green';
+            removeClass = 'btn-green-inactive';
+        } else {
+            // Estado: Animación pausada -> Mostrar botón para Reanudar
+            iconSvg = `
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 9V15L15 12L10 9Z" fill="currentColor"/>
+                    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/>
+                </svg>`;
+            text = 'Reanudar';
+            title = "Reanudar el movimiento";
+            addClass = 'btn-green-inactive';
+            removeClass = 'btn-green';
+        }
+        // Aplicar cambios al botón
+        toggleAnimationBtn.innerHTML = iconSvg + text;
+        toggleAnimationBtn.title = title;
+        toggleAnimationBtn.classList.remove(removeClass);
+        toggleAnimationBtn.classList.add(addClass);
+    }
+
+    // Genera colores aleatorios para el inicio y fin del gradiente y actualiza la UI
+    function randomizeColors() {
+      const getRandomColor = () => ({
+        r: Math.floor(Math.random() * 256),
+        g: Math.floor(Math.random() * 256),
+        b: Math.floor(Math.random() * 256)
+      });
+
+      state.gradient.start = getRandomColor();
+      state.gradient.end = getRandomColor();
+
+      // Actualizar los input type="color" en la UI para que reflejen los nuevos colores
+      startColorPicker.value = rgbToHex(state.gradient.start.r, state.gradient.start.g, state.gradient.start.b);
+      endColorPicker.value = rgbToHex(state.gradient.end.r, state.gradient.end.g, state.gradient.end.b);
+
+      showInfoBadge('Colores aleatorios aplicados');
+    }
+
+    // --- Funcionalidad de Pantalla Completa ---
+    function toggleFullscreen() {
+        // Si no estamos en pantalla completa...
+        if (!document.fullscreenElement) {
+            // Solicitar pantalla completa para todo el documento HTML
+            document.documentElement.requestFullscreen()
+                .then(() => {
+                    // Éxito: Actualizar icono y tooltip del botón
+                    fullscreenIconOpen.style.display = 'none';
+                    fullscreenIconExit.style.display = 'block';
+                    fullscreenBtn.title = "Salir de Pantalla Completa";
+                })
+                .catch(err => {
+                    // Error: Informar al usuario y por consola
+                    console.error(`Error al intentar entrar en pantalla completa: ${err.message} (${err.name})`);
+                    showInfoBadge('No se pudo activar pantalla completa');
+                 });
+        } else {
+            // Si ya estamos en pantalla completa...
+            if (document.exitFullscreen) {
+                // Salir de pantalla completa
+                document.exitFullscreen()
+                    .then(() => {
+                        // Éxito: Actualizar icono y tooltip (esto también lo hace el listener 'fullscreenchange')
+                        // fullscreenIconOpen.style.display = 'block';
+                        // fullscreenIconExit.style.display = 'none';
+                        // fullscreenBtn.title = "Pantalla Completa";
+                    })
+                     .catch(err => {
+                         // Error: Informar
+                        console.error(`Error al intentar salir de pantalla completa: ${err.message} (${err.name})`);
+                        showInfoBadge('Error al salir de pantalla completa');
+                    });
+            }
+        }
+    }
+    // Listener para detectar cambios en el estado de pantalla completa (ej. al pulsar ESC)
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            // Hemos salido de pantalla completa
+            fullscreenIconOpen.style.display = 'block';
+            fullscreenIconExit.style.display = 'none';
+            fullscreenBtn.title = "Pantalla Completa";
+        } else {
+            // Hemos entrado en pantalla completa
+            fullscreenIconOpen.style.display = 'none';
+            fullscreenIconExit.style.display = 'block';
+             fullscreenBtn.title = "Salir de Pantalla Completa";
+        }
+        // Al cambiar el estado de pantalla completa, es buena idea redimensionar el canvas
+        // por si la resolución disponible ha cambiado.
+        resizeCanvas();
+    });
+
+    // --- Actualizadores de Estado y UI desde Controles ---
+
+    // Llamada cuando el slider de velocidad cambia
+    function updateSpeed() {
+      state.speedFactor = parseFloat(speedSlider.value);
+      updateSpeedLabel();
+    }
+    // Actualiza solo la etiqueta de texto para la velocidad
+    function updateSpeedLabel() {
+        speedValue.textContent = `${state.speedFactor.toFixed(1)}x`;
+    }
+
+    // Llamada cuando el slider de densidad (umbral) cambia
+    function updateThreshold() {
+      state.threshold = parseFloat(thresholdSlider.value);
+      updateDensityLabel();
+    }
+    // Actualiza la etiqueta de texto para la densidad (con nombres descriptivos)
+    function updateDensityLabel() {
+        let densityText;
+        // Mapear el valor numérico a una descripción textual
+        if (state.threshold <= 0.85) densityText = 'Muy Alta';
+        else if (state.threshold <= 0.95) densityText = 'Alta';
+        else if (state.threshold <= 1.05) densityText = 'Media';
+        else if (state.threshold <= 1.15) densityText = 'Baja';
+        else densityText = 'Muy Baja'; // state.threshold > 1.15
+        densityValue.textContent = densityText;
+    }
+
+    // Llamada cuando el slider de tamaño cambia
+    function updateRadius() {
+      state.radiusFactor = parseFloat(radiusSlider.value);
+      updateRadiusLabel();
+      // Importante: Si las bolas están cerca de los bordes, su tamaño cambia,
+      // así que hay que asegurarse de que sigan dentro.
+      ensureBallsInBounds();
+    }
+    // Actualiza la etiqueta de texto para el tamaño
+     function updateRadiusLabel() {
+        radiusValue.textContent = `${state.radiusFactor.toFixed(1)}x`;
+    }
+
+    // Llamada cuando el slider de calidad cambia
+    function updateQuality() {
+      const newQuality = parseInt(qualitySlider.value);
+      // Solo actuar si el valor realmente ha cambiado
+      if (newQuality !== state.smoothFactor) {
+         state.smoothFactor = newQuality;
+         updateQualityLabel();
+         // Redimensionar el canvas offscreen AHORA es crucial
+         offscreenCanvas.width = canvas.width * state.smoothFactor;
+         offscreenCanvas.height = canvas.height * state.smoothFactor;
+         // Informar al usuario del cambio
+         showInfoBadge(`Calidad: ${qualityValue.textContent}`);
+      }
+    }
+    // Actualiza la etiqueta de texto para la calidad
+    function updateQualityLabel() {
+        let qualityText;
+        // Mapear el valor numérico a una descripción textual
+        if (state.smoothFactor === 1) qualityText = 'Baja (1x)';
+        else if (state.smoothFactor === 2) qualityText = 'Media (2x)';
+        else if (state.smoothFactor === 3) qualityText = 'Alta (3x)';
+        else qualityText = 'Ultra (4x)'; // smoothFactor = 4
+        qualityValue.textContent = qualityText;
+    }
+
+    // Llamada cuando el selector de color de fondo cambia
+    function updateBackgroundColor() {
+      state.backgroundColor = bgColorPicker.value;
+      // No se necesita redibujar inmediatamente, el próximo frame lo hará.
+    }
+
+    // Llamada cuando el selector de color de inicio del gradiente cambia
+    function updateStartColor() {
+      state.gradient.start = hexToRgb(startColorPicker.value);
+    }
+
+    // Llamada cuando el selector de color de fin del gradiente cambia
+    function updateEndColor() {
+      state.gradient.end = hexToRgb(endColorPicker.value);
+    }
+
+    // Función para actualizar todas las etiquetas de la UI a la vez (útil en init)
+    function updateAllUILabels() {
+        updateSpeedLabel();
+        updateDensityLabel();
+        updateRadiusLabel();
+        updateQualityLabel();
+        // Los colores se establecen por sus valores iniciales en el HTML/state
+    }
+
+    // --- Utilidades ---
+
+    // Muestra un mensaje temporal en el badge de información
+    function showInfoBadge(message) {
+      // Si ya hay un mensaje mostrándose, cancelar su temporizador de ocultación
+      if (state.infoTimeoutId) {
+        clearTimeout(state.infoTimeoutId);
+      }
+
+      infoBadge.textContent = message; // Poner el nuevo mensaje
+      infoBadge.classList.add('visible'); // Hacerlo visible (activa la transición CSS)
+
+      // Programar la ocultación del mensaje después de un tiempo
+      state.infoTimeoutId = setTimeout(() => {
+        infoBadge.classList.remove('visible'); // Ocultarlo (activa transición CSS)
+        state.infoTimeoutId = null; // Limpiar el ID del temporizador
+      }, INFO_BADGE_DURATION_MS);
+    }
+
+    // Inicia (o reinicia) el bucle de animación
+    function startAnimation() {
+      // Si ya hay una animación en curso, cancelarla primero
+      if (state.animationId) {
+        cancelAnimationFrame(state.animationId);
+      }
+      state.lastTimestamp = 0; // Resetear timestamp para cálculo correcto de dt en el primer frame
+      // Solicitar el primer frame
+      state.animationId = requestAnimationFrame(updateAnimation);
+    }
+
+    // Convierte un color hexadecimal (#RRGGBB o #RGB) a un objeto {r, g, b}
+    function hexToRgb(hex) {
+      hex = hex.replace(/^#/, ''); // Quitar el # inicial si existe
+      // Expandir formato corto (#RGB) a formato largo (#RRGGBB)
+      if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      }
+      // Convertir el valor hexadecimal a un entero
+      const bigint = parseInt(hex, 16);
+      // Extraer los componentes R, G, B usando operaciones de bits
+      return {
+        r: (bigint >> 16) & 255,
+        g: (bigint >> 8) & 255,
+        b: bigint & 255
+      };
+    }
+
+    // Convierte un color {r, g, b} a formato hexadecimal #RRGGBB
+    function rgbToHex(r, g, b) {
+      // Combina los componentes en un número, convierte a hexadecimal,
+      // quita el '1' inicial (del truco `1 << 24`), y asegura 6 dígitos con padStart.
+      return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).padStart(6, '0');
+    }
+
+     // --- Configuración de TODOS los Event Listeners ---
+    function setupEventListeners() {
+        // Redimensionar canvas cuando cambia el tamaño de la ventana
+        window.addEventListener('resize', resizeCanvas);
+
+        // Interacción con el canvas (Click/Tap y Arrastre)
+        canvas.addEventListener('mousedown', handleInteractionStart);
+        // Usar { passive: false } para poder llamar preventDefault() y evitar scroll/zoom
+        canvas.addEventListener('touchstart', handleInteractionStart, { passive: false });
+        // Escuchar movimientos en toda la ventana para no perder el arrastre si el cursor sale del canvas
+        window.addEventListener('mousemove', handleInteractionMove);
+        window.addEventListener('touchmove', handleInteractionMove, { passive: false });
+        // Escuchar fin de interacción en toda la ventana
+        window.addEventListener('mouseup', handleInteractionEnd);
+        window.addEventListener('touchend', handleInteractionEnd);
+        // También detectar si el ratón sale del documento mientras se arrastra
+        document.addEventListener('mouseleave', handleInteractionEnd);
+
+
+        // Sliders: Usar evento 'input' para actualización en tiempo real mientras se desliza
+        speedSlider.addEventListener('input', updateSpeed);
+        thresholdSlider.addEventListener('input', updateThreshold);
+        radiusSlider.addEventListener('input', updateRadius);
+        // Para calidad, 'input' también es bueno, aunque 'change' (al soltar) podría ser una opción
+        // si el redimensionado del offscreen fuera muy costoso en tiempo real.
+        qualitySlider.addEventListener('input', updateQuality);
+
+        // Selectores de Color: 'input' actualiza mientras se elige el color
+        bgColorPicker.addEventListener('input', updateBackgroundColor);
+        startColorPicker.addEventListener('input', updateStartColor);
+        endColorPicker.addEventListener('input', updateEndColor);
+
+        // Botones: Evento 'click'
+        addBallBtn.addEventListener('click', addBall);
+        resetBtn.addEventListener('click', resetBalls);
+        toggleAnimationBtn.addEventListener('click', toggleAnimation);
+        randomColorsBtn.addEventListener('click', randomizeColors);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+        // (El listener para 'fullscreenchange' ya está configurado globalmente)
+    }
+
+
+    // --- Punto de Entrada: Ejecutar Inicialización cuando el DOM esté listo ---
+    document.addEventListener('DOMContentLoaded', init);
+
+  </script>
+</body>
+</html>

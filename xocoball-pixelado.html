@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XocoBalls - Experiencia Interactiva (Optimizada)</title>
+  <style>
+    /* ... (Estilos CSS sin cambios, puedes copiar los de la versión anterior) ... */
+      * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden; /* Evita barras de scroll */
+      height: 100vh;   /* Ocupa toda la altura de la ventana */
+      width: 100vw;    /* Ocupa todo el ancho de la ventana */
+      background-color: #000; /* Fondo negro por defecto */
+      color: #fff;
+      position: relative; /* Necesario para posicionar elementos hijos absolutos */
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0; /* Detrás de la UI */
+      /* Cursor inicial para indicar interactividad */
+      cursor: grab;
+      /* Para el efecto pixelado nítido */
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+
+    .ui-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      z-index: 10; /* Encima del canvas */
+      padding: 20px;
+      background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%);
+      transition: transform 0.3s ease;
+      transform: translateY(75%); /* Oculto parcialmente por defecto */
+      max-height: 90vh; /* Evita que ocupe toda la pantalla en móviles */
+      overflow-y: auto; /* Permite scroll si hay muchos controles */
+    }
+
+    .ui-container:hover,
+    .ui-container:focus-within /* Mantener abierto si un control tiene foco */ {
+      transform: translateY(0); /* Mostrar completamente al pasar el mouse o interactuar */
+    }
+
+    .ui-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      cursor: pointer; /* Indica que se puede interactuar con la cabecera */
+    }
+
+    .ui-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .controls-hint {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .arrow-icon {
+      width: 20px;
+      height: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .ui-container:hover .arrow-icon,
+    .ui-container:focus-within .arrow-icon {
+      transform: rotate(180deg); /* Gira la flecha al mostrar */
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+      align-items: flex-start; /* Alinea arriba si los grupos tienen alturas distintas */
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1; /* Ocupa espacio disponible */
+      min-width: 200px; /* Ancho mínimo para evitar que se aplasten */
+      gap: 8px;
+    }
+
+    .control-group-inline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+       flex: 1; /* Ocupa espacio disponible */
+       min-width: 150px; /* Ajustar si es necesario */
+       margin-bottom: 8px; /* Espacio si se envuelven */
+    }
+
+    .control-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: space-between;
+      white-space: nowrap; /* Evitar que el texto de la etiqueta se rompa */
+      margin-right: 8px; /* Espacio entre etiqueta y control/valor */
+    }
+
+     .control-label span { /* Para el valor en la misma línea */
+        margin-left: auto; /* Empuja el valor a la derecha */
+     }
+
+    .control-value {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.75rem;
+      margin-left: 4px; /* Pequeño espacio para el valor del slider */
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      appearance: none; /* Estilos personalizados */
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      outline: none;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #3b82f6; /* Color azul */
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border: none;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .slider:hover::-webkit-slider-thumb {
+      transform: scale(1.2); /* Efecto hover en el pulgar */
+    }
+
+    .slider:hover::-moz-range-thumb {
+      transform: scale(1.2);
+    }
+    .slider:active::-webkit-slider-thumb {
+        transform: scale(1.3); /* Efecto al arrastrar */
+        background: #2563eb;
+    }
+    .slider:active::-moz-range-thumb {
+        transform: scale(1.3);
+        background: #2563eb;
+    }
+
+    .color-picker {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(255, 255, 255, 0.3); /* Borde sutil */
+      border-radius: 50%;
+      cursor: pointer;
+      background: transparent; /* El fondo será el color seleccionado */
+      padding: 0; /* Eliminar padding interno */
+      overflow: hidden; /* Asegurar que el swatch no se salga */
+      flex-shrink: 0; /* Evitar que se encoja */
+    }
+
+    .color-picker::-webkit-color-swatch-wrapper {
+      padding: 0; /* Eliminar padding interno en Chrome */
+    }
+
+    .color-picker::-webkit-color-swatch {
+      border: none; /* Sin borde interno */
+      border-radius: 50%;
+    }
+
+    .color-picker::-moz-color-swatch {
+      border: none;
+      border-radius: 50%;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap; /* Para que los botones se ajusten en pantallas pequeñas */
+      gap: 10px; /* Un poco más de espacio entre botones */
+      margin-top: 20px; /* Más espacio antes de los botones */
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex; /* Para alinear icono y texto */
+      align-items: center;
+      justify-content: center; /* Centrar contenido */
+      gap: 8px;
+      color: white;
+      outline: none; /* Quitar outline por defecto */
+      flex-grow: 1; /* Permite que los botones crezcan */
+      flex-basis: 150px; /* Base para el wrap */
+    }
+    .btn:focus-visible { /* Estilo de foco accesible */
+       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0; /* Evitar que el icono se encoja */
+    }
+
+    .btn-blue { background-color: #3b82f6; }
+    .btn-blue:hover { background-color: #2563eb; }
+
+    .btn-gray { background-color: #6b7280; }
+    .btn-gray:hover { background-color: #4b5563; }
+
+    .btn-green { background-color: #10b981; }
+    .btn-green:hover { background-color: #059669; }
+
+    .btn-green-inactive { background-color: #18181b; color: #71717a; }
+    .btn-green-inactive:hover { background-color: #27272a; }
+
+    .btn-purple { background-color: #8b5cf6; }
+    .btn-purple:hover { background-color: #7c3aed; }
+
+    .info-badge {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 8px 16px;
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      z-index: 20;
+      color: rgba(255, 255, 255, 0.9);
+      pointer-events: none; /* No interfiere con clics */
+      opacity: 0;
+      transform: translateY(-10px); /* Efecto de aparición */
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .info-badge.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+       .ui-container {
+        padding: 16px;
+        transform: translateY(85%); /* Ocultar un poco más en móvil */
+      }
+      .ui-title {
+        font-size: 1.25rem;
+      }
+       .controls-hint span {
+        /* Podríamos mantener el texto o cambiarlo a algo más corto */
+         font-size: 0.8rem;
+         /* display: none; */ /* Descomentar si se quiere ocultar el texto */
+      }
+      .control-group {
+        min-width: 150px; /* Ajuste para móviles */
+      }
+      .control-group-inline {
+        min-width: 130px;
+      }
+      .btn {
+        flex-basis: 120px; /* Ajustar base de botones en móvil */
+        padding: 8px 12px; /* Menos padding en móvil */
+      }
+    }
+
+    /* Fullscreen button styles */
+    .fullscreen-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 20;
+      background-color: rgba(0, 0, 0, 0.6);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+      outline: none; /* Quitar outline por defecto */
+    }
+    .fullscreen-btn:focus-visible { /* Estilo de foco accesible */
+       box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+    }
+
+    .fullscreen-btn:hover {
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .fullscreen-icon {
+      width: 20px;
+      height: 20px;
+      fill: white;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="metaballsCanvas"></canvas>
+
+  <button id="fullscreenBtn" class="fullscreen-btn" title="Pantalla Completa">
+    <svg class="fullscreen-icon" id="fullscreenIconOpen" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+    </svg>
+    <svg class="fullscreen-icon" id="fullscreenIconExit" style="display: none;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+    </svg>
+  </button>
+
+  <div id="infoBadge" class="info-badge">Configuración actualizada</div>
+
+  <div class="ui-container" tabindex="-1">
+    <div class="ui-header">
+      <h2 class="ui-title">Controles XocoBalls</h2>
+      <div class="controls-hint">
+        <span>Pasa el cursor o desliza</span>
+        <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 15L12 9L18 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Fila 1: Velocidad y Densidad -->
+    <div class="controls-row">
+      <div class="control-group">
+        <div class="control-label">
+          <label for="speedSlider">Velocidad</label>
+          <span class="control-value" id="speedValue">6.0x</span>
+        </div>
+        <input type="range" id="speedSlider" class="slider" min="0.1" max="6.0" step="0.1" value="6.0" aria-labelledby="speedValue">
+      </div>
+      <div class="control-group">
+        <div class="control-label">
+          <label for="thresholdSlider">Densidad</label>
+          <span class="control-value" id="densityValue">Muy Baja</span>
+        </div>
+        <input type="range" id="thresholdSlider" class="slider" min="0.75" max="1.25" step="0.05" value="1.25" aria-labelledby="densityValue">
+      </div>
+    </div>
+
+    <!-- Fila 2: Tamaño y Calidad -->
+    <div class="controls-row">
+       <div class="control-group">
+        <div class="control-label">
+          <label for="radiusSlider">Tamaño</label>
+          <span class="control-value" id="radiusValue">1.0x</span>
+        </div>
+        <input type="range" id="radiusSlider" class="slider" min="0.5" max="2.0" step="0.1" value="1.0" aria-labelledby="radiusValue">
+      </div>
+      <div class="control-group">
+        <div class="control-label">
+          <label for="qualitySlider">Calidad Render</label> <!-- Nombre más específico -->
+          <span class="control-value" id="qualityValue">Baja (1x)</span>
+        </div>
+        <input type="range" id="qualitySlider" class="slider" min="1" max="4" step="1" value="1" aria-labelledby="qualityValue">
+      </div>
+    </div>
+
+    <!-- ****** NUEVA FILA: Controles de Brillo ****** -->
+    <div class="controls-row">
+        <div class="control-group">
+            <div class="control-label">
+              <label for="glowIntensitySlider">Intensidad Brillo</label>
+              <span class="control-value" id="glowIntensityValue">75</span> <!-- Valor inicial -->
+            </div>
+            <input type="range" id="glowIntensitySlider" class="slider" min="0" max="200" step="5" value="75" aria-labelledby="glowIntensityValue">
+        </div>
+        <div class="control-group">
+            <div class="control-label">
+              <label for="glowThresholdSlider">Umbral Brillo</label>
+              <span class="control-value" id="glowThresholdValue">1.50</span> <!-- Valor inicial -->
+            </div>
+            <input type="range" id="glowThresholdSlider" class="slider" min="1.0" max="2.0" step="0.05" value="1.5" aria-labelledby="glowThresholdValue">
+        </div>
+    </div>
+    <!-- ******************************************* -->
+
+    <!-- ****** NUEVA FILA: Control de Pixelado ****** -->
+     <div class="controls-row">
+        <div class="control-group">
+            <div class="control-label">
+                <label for="pixelationSlider">Pixelado</label>
+                <span class="control-value" id="pixelationValue">1x (Ninguno)</span> <!-- Valor inicial -->
+            </div>
+            <input type="range" id="pixelationSlider" class="slider" min="1" max="16" step="1" value="1" aria-labelledby="pixelationValue">
+        </div>
+        <!-- Podríamos añadir otro control en esta fila si quisiéramos -->
+         <div class="control-group" style="opacity: 0; pointer-events: none;"></div> <!-- Placeholder para alinear -->
+    </div>
+    <!-- ******************************************* -->
+
+
+    <!-- Fila 3: Colores -->
+    <div class="controls-row">
+      <div class="control-group-inline">
+        <label for="bgColorPicker" class="control-label">Fondo</label>
+        <input type="color" id="bgColorPicker" class="color-picker" value="#000000" title="Color de fondo">
+      </div>
+      <div class="control-group-inline">
+        <label for="startColorPicker" class="control-label">Inicio</label>
+        <input type="color" id="startColorPicker" class="color-picker" value="#32c8ff" title="Color inicial del gradiente">
+      </div>
+      <div class="control-group-inline">
+        <label for="endColorPicker" class="control-label">Final</label>
+        <input type="color" id="endColorPicker" class="color-picker" value="#ff32c8" title="Color final del gradiente">
+      </div>
+    </div>
+
+    <!-- Fila 4: Botones -->
+    <div class="button-row">
+      <button id="addBallBtn" class="btn btn-blue" title="Añadir una nueva esfera aleatoria">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6V12M12 12V18M12 12H18M12 12H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Añadir
+      </button>
+      <button id="resetBtn" class="btn btn-gray" title="Restablecer esferas a la posición inicial">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4V10H7M23 20V14H17M3.51 9C5.84 4.35 11.15 2.11 16.5 4.44C20.2 6.05 22.5 9.72 22.5 13.72M20.49 15C18.16 19.65 12.85 21.89 7.5 19.56C3.8 17.95 1.5 14.28 1.5 10.28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Reiniciar
+      </button>
+      <button id="toggleAnimationBtn" class="btn btn-green" title="Pausar o reanudar el movimiento">Pausar</button>
+      <button id="randomColorsBtn" class="btn btn-purple" title="Generar colores de gradiente aleatorios">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.364 5.63604C19.9261 7.19815 20.8787 9.28986 20.8787 11.5C20.8787 13.7101 19.9261 15.8019 18.364 17.364M15.5355 8.46447C16.3166 9.24552 16.7429 10.3359 16.7429 11.5C16.7429 12.6641 16.3166 13.7545 15.5355 14.5355M3 11.5C3 7.02166 6.10691 3.35266 10.1213 2.63604M6.63604 2.63604C8.19815 1.07393 10.2899 0.121338 12.5 0.121338C17.7467 0.121338 22 4.37464 22 9.62134V10.5M22 13.5V14.3787C22 19.6254 17.7467 23.8787 12.5 23.8787C10.2899 23.8787 8.19815 22.9261 6.63604 21.364L3 17.7279" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.0503 5.94975L18.1716 3.82843" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5L6.63604 15.136" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Aleatorio
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // --- Estado Global ---
+    const state = {
+      balls: [],
+      draggedBallId: null,
+      animate: true,
+      threshold: 1.25,     // Densidad inicial: Muy Baja
+      smoothFactor: 1,     // Calidad inicial: Baja (1x)
+      speedFactor: 6.0,    // Velocidad inicial: 6.0x
+      radiusFactor: 1.0,
+      backgroundColor: "#000000",
+      gradient: {
+        start: hexToRgb("#32c8ff"),
+        end: hexToRgb("#ff32c8")
+      },
+      // --- NUEVOS ESTADOS ---
+      glowIntensity: 75,   // Intensidad del brillo (valor por defecto)
+      glowThreshold: 1.5,  // Umbral para empezar el brillo (valor por defecto)
+      pixelationFactor: 1, // Factor de pixelado (1 = ninguno)
+      // --- FIN NUEVOS ESTADOS ---
+      animationId: null,
+      infoTimeoutId: null,
+      isDragging: false,
+      lastTimestamp: 0
+    };
+
+    // --- Referencias a Elementos del DOM ---
+    const canvas = document.getElementById('metaballsCanvas');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const fullscreenIconOpen = document.getElementById('fullscreenIconOpen');
+    const fullscreenIconExit = document.getElementById('fullscreenIconExit');
+    const toggleAnimationBtn = document.getElementById('toggleAnimationBtn');
+    const infoBadge = document.getElementById('infoBadge');
+
+    // Sliders y sus valores asociados
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+    const thresholdSlider = document.getElementById('thresholdSlider');
+    const densityValue = document.getElementById('densityValue');
+    const radiusSlider = document.getElementById('radiusSlider');
+    const radiusValue = document.getElementById('radiusValue');
+    const qualitySlider = document.getElementById('qualitySlider');
+    const qualityValue = document.getElementById('qualityValue');
+
+    // --- NUEVAS REFERENCIAS DOM ---
+    const glowIntensitySlider = document.getElementById('glowIntensitySlider');
+    const glowIntensityValue = document.getElementById('glowIntensityValue');
+    const glowThresholdSlider = document.getElementById('glowThresholdSlider');
+    const glowThresholdValue = document.getElementById('glowThresholdValue');
+    const pixelationSlider = document.getElementById('pixelationSlider');
+    const pixelationValue = document.getElementById('pixelationValue');
+    // --- FIN NUEVAS REFERENCIAS DOM ---
+
+    // Selectores de Color
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    const startColorPicker = document.getElementById('startColorPicker');
+    const endColorPicker = document.getElementById('endColorPicker');
+
+    // Botones de Acción
+    const addBallBtn = document.getElementById('addBallBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const randomColorsBtn = document.getElementById('randomColorsBtn');
+
+    // --- Canvas Offscreen y Pixelado ---
+    const offscreenCanvas = document.createElement('canvas'); // Para renderizado Hi-Res
+    const pixelatedCanvas = document.createElement('canvas'); // Para el efecto de pixelado
+    // ---
+
+    // --- Constantes Configurables ---
+    // ... (sin cambios)
+    const INITIAL_BALL_COUNT_FACTOR = 150 * 150;
+    const MIN_INITIAL_BALLS = 3;
+    const MAX_INITIAL_BALLS = 6;
+    const BASE_BALL_RADIUS_MIN = 30;
+    const BASE_BALL_RADIUS_MAX = 45;
+    const INITIAL_VELOCITY_RANGE = 1.2;
+    const MAX_DELTA_TIME_MS = 50;
+    const TARGET_FRAME_TIME_MS = 1000 / 60;
+    const DRAG_SENSITIVITY_MULTIPLIER = 1.5;
+    const INFO_BADGE_DURATION_MS = 2000;
+    const GRADIENT_START_OFFSET = 0.85; // Dónde empieza el gradiente respecto al umbral
+    const GRADIENT_RANGE_FACTOR = 0.5; // Factor para mapear intensidad a [0, 1] para el gradiente
+    const GLOW_RANGE_FACTOR = 0.5; // Factor para mapear intensidad a [0, 1] para el brillo
+
+    // --- Inicialización ---
+    function init() {
+      resizeCanvas(); // Ajusta canvas visible, offscreen y pixelated
+      createInitialBalls();
+      setupEventListeners(); // Añade listeners para nuevos controles
+      updateAllUILabels(); // Actualiza todas las etiquetas, incluidas las nuevas
+      updateToggleButtonIcon();
+      startAnimation();
+    }
+
+    // --- Creación de Bolas ---
+    // ... (sin cambios)
+     function createInitialBalls() {
+      const width = canvas.width;
+      const height = canvas.height;
+      const numBalls = Math.max(MIN_INITIAL_BALLS, Math.min(MAX_INITIAL_BALLS, Math.floor((width * height) / INITIAL_BALL_COUNT_FACTOR)));
+      state.balls = [];
+      for (let i = 0; i < numBalls; i++) {
+         const radius = BASE_BALL_RADIUS_MIN + Math.random() * (BASE_BALL_RADIUS_MAX - BASE_BALL_RADIUS_MIN);
+         const x = radius + Math.random() * (width - radius * 2);
+         const y = radius + Math.random() * (height - radius * 2);
+         state.balls.push(createBall(x, y, radius));
+      }
+    }
+    function createBall(x, y, radius) {
+      return {
+        id: Date.now() + Math.random(),
+        x: x, y: y, radius: radius,
+        vx: (Math.random() - 0.5) * INITIAL_VELOCITY_RANGE,
+        vy: (Math.random() - 0.5) * INITIAL_VELOCITY_RANGE
+      };
+    }
+
+    // --- Manejo del Canvas y Redimensionado ---
+    function resizeCanvas() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      // Canvas principal (visible)
+      canvas.width = width;
+      canvas.height = height;
+
+      // Canvas Offscreen (alta resolución para suavizado)
+      offscreenCanvas.width = width * state.smoothFactor;
+      offscreenCanvas.height = height * state.smoothFactor;
+
+      // --- NUEVO: Redimensionar Canvas Pixelado ---
+      // Calcular tamaño pixelado (mínimo 1x1)
+      pixelatedCanvas.width = Math.max(1, Math.floor(width / state.pixelationFactor));
+      pixelatedCanvas.height = Math.max(1, Math.floor(height / state.pixelationFactor));
+      // --- FIN NUEVO ---
+
+      ensureBallsInBounds();
+    }
+
+     // ... (ensureBallsInBounds sin cambios)
+    function ensureBallsInBounds() {
+        const width = canvas.width;
+        const height = canvas.height;
+        state.balls.forEach(ball => {
+             const adjustedRadius = ball.radius * state.radiusFactor;
+             ball.x = Math.max(adjustedRadius, Math.min(width - adjustedRadius, ball.x));
+             ball.y = Math.max(adjustedRadius, Math.min(height - adjustedRadius, ball.y));
+        });
+    }
+
+    // --- Bucle Principal de Animación ---
+    function updateAnimation(timestamp) {
+      if (!canvas) return;
+
+      // --- Calcular Delta Time ---
+      // ... (sin cambios)
+       if (!state.lastTimestamp) { state.lastTimestamp = timestamp; }
+        let deltaTime = timestamp - state.lastTimestamp;
+        state.lastTimestamp = timestamp;
+        if (deltaTime > MAX_DELTA_TIME_MS) { deltaTime = MAX_DELTA_TIME_MS; }
+        const dt = deltaTime / TARGET_FRAME_TIME_MS;
+      // ---
+
+      // Contextos
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const offCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+      const pixelCtx = pixelatedCanvas.getContext('2d'); // No necesita willReadFrequently
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const offWidth = offscreenCanvas.width;
+      const offHeight = offscreenCanvas.height;
+      const pixelWidth = pixelatedCanvas.width;
+      const pixelHeight = pixelatedCanvas.height;
+
+      // 1. Limpiar canvas VISIBLE con color de fondo
+      ctx.fillStyle = state.backgroundColor;
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Limpiar canvas OFFSCREEN
+      offCtx.clearRect(0, 0, offWidth, offHeight);
+
+      // 3. Actualizar posiciones de bolas
+      if (state.animate) {
+        updateBallPositions(width, height, dt);
+      }
+
+      // 4. Dibujar metaballs en ALTA RESOLUCIÓN (offscreen)
+      drawMetaballsHiRes(offCtx, offWidth, offHeight);
+
+      // --- NUEVO PIPELINE: Pixelado ---
+      // 5. Dibujar resultado Hi-Res en canvas PEQUEÑO (Pixelado)
+      //    (Si no hay pixelado, pixelWidth/Height será igual a width/height)
+      pixelCtx.clearRect(0, 0, pixelWidth, pixelHeight); // Limpiar canvas pixelado
+      // Desactivar suavizado al reducir para mantener nitidez si hay pixelado
+      pixelCtx.imageSmoothingEnabled = state.pixelationFactor === 1;
+      pixelCtx.drawImage(
+          offscreenCanvas,
+          0, 0, offWidth, offHeight,        // Origen: Completo Hi-Res
+          0, 0, pixelWidth, pixelHeight   // Destino: Pequeño Pixelado
+      );
+
+      // 6. Dibujar resultado PEQUEÑO (Pixelado) en canvas GRANDE (Visible)
+      // Desactivar suavizado al ampliar para crear el efecto de bloques
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+          pixelatedCanvas,
+          0, 0, pixelWidth, pixelHeight,  // Origen: Pequeño Pixelado
+          0, 0, width, height             // Destino: Completo Visible
+      );
+       // --- FIN NUEVO PIPELINE ---
+
+
+      // 7. Solicitar siguiente frame
+      state.animationId = requestAnimationFrame(updateAnimation);
+    }
+
+    // --- Actualización de Posición de Bolas ---
+    // ... (sin cambios)
+     function updateBallPositions(width, height, dt) {
+      state.balls.forEach(ball => {
+        if (ball.id === state.draggedBallId) return;
+        let newX = ball.x + ball.vx * state.speedFactor * dt;
+        let newY = ball.y + ball.vy * state.speedFactor * dt;
+        const adjustedRadius = ball.radius * state.radiusFactor;
+        if (newX < adjustedRadius || newX > width - adjustedRadius) {
+          ball.vx *= -1;
+          newX = ball.x + ball.vx * state.speedFactor * dt;
+          newX = Math.max(adjustedRadius, Math.min(width - adjustedRadius, newX));
+        }
+        if (newY < adjustedRadius || newY > height - adjustedRadius) {
+          ball.vy *= -1;
+          newY = ball.y + ball.vy * state.speedFactor * dt;
+          newY = Math.max(adjustedRadius, Math.min(height - adjustedRadius, newY));
+        }
+        ball.x = newX;
+        ball.y = newY;
+      });
+    }
+
+
+    // --- Dibujo de Metaballs (Alta Resolución) ---
+    function drawMetaballsHiRes(ctx, width, height) {
+      const imageData = ctx.createImageData(width, height);
+      const data = imageData.data;
+
+      // Precalcular valores
+      const smoothFactor = state.smoothFactor;
+      const threshold = state.threshold;
+      const startR = state.gradient.start.r;
+      const startG = state.gradient.start.g;
+      const startB = state.gradient.start.b;
+      const deltaR = state.gradient.end.r - startR;
+      const deltaG = state.gradient.end.g - startG;
+      const deltaB = state.gradient.end.b - startB;
+      const radiusFactor = state.radiusFactor;
+      const balls = state.balls;
+      const numBalls = balls.length;
+      const INFLUENCE_OFFSET = 0.1;
+
+      // --- Usar valores de brillo del estado ---
+      const currentGlowThreshold = state.glowThreshold;
+      const currentGlowIntensity = state.glowIntensity;
+      // ---
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const visibleX = x / smoothFactor;
+          const visibleY = y / smoothFactor;
+          let sum = 0;
+          for (let i = 0; i < numBalls; i++) {
+             const ball = balls[i];
+             const dx = visibleX - ball.x;
+             const dy = visibleY - ball.y;
+             const distSq = dx * dx + dy * dy;
+             const adjustedRadius = ball.radius * radiusFactor;
+             const adjustedRadiusSq = adjustedRadius * adjustedRadius;
+             sum += adjustedRadiusSq / (distSq + INFLUENCE_OFFSET);
+          }
+
+          const isInside = sum > threshold;
+          let r = 0, g = 0, b = 0, a = 0;
+
+          if (isInside) {
+            const intensityRaw = sum / threshold - GRADIENT_START_OFFSET;
+            const intensity = Math.min(intensityRaw, 2.0);
+            const t = Math.max(0, Math.min(1, intensity * GRADIENT_RANGE_FACTOR));
+            r = Math.round(startR + deltaR * t);
+            g = Math.round(startG + deltaG * t);
+            b = Math.round(startB + deltaB * t);
+
+            // --- Usar umbral e intensidad de brillo del estado ---
+            if (intensity > currentGlowThreshold && currentGlowIntensity > 0) {
+              const glowFactor = (intensity - currentGlowThreshold) * GLOW_RANGE_FACTOR;
+              r = Math.min(255, r + Math.round(glowFactor * currentGlowIntensity));
+              g = Math.min(255, g + Math.round(glowFactor * currentGlowIntensity));
+              b = Math.min(255, b + Math.round(glowFactor * currentGlowIntensity));
+            }
+            // ---
+
+            a = 255;
+          }
+
+          const pixelIndex = (y * width + x) * 4;
+          data[pixelIndex] = r;
+          data[pixelIndex + 1] = g;
+          data[pixelIndex + 2] = b;
+          data[pixelIndex + 3] = a;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    // --- Manejo de Interacción del Usuario ---
+    // ... (sin cambios: handleInteractionStart, Move, End, getEventPosition, findAndSetDraggedBall, updateDraggedBallPosition)
+     function handleInteractionStart(e) {
+      if (e.cancelable) e.preventDefault();
+      const pos = getEventPosition(e);
+      if (!pos) return;
+      findAndSetDraggedBall(pos.x, pos.y);
+      if (state.draggedBallId !== null) {
+          state.isDragging = true;
+          canvas.style.cursor = 'grabbing';
+      }
+    }
+    function handleInteractionMove(e) {
+      if (!state.isDragging || state.draggedBallId === null) return;
+      if (e.cancelable) e.preventDefault();
+      const pos = getEventPosition(e);
+       if (!pos) return;
+      updateDraggedBallPosition(pos.x, pos.y);
+    }
+    function handleInteractionEnd() {
+      if (state.isDragging) {
+          state.isDragging = false;
+          state.draggedBallId = null;
+          canvas.style.cursor = 'grab';
+      }
+    }
+    function getEventPosition(e) {
+        const rect = canvas.getBoundingClientRect();
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX; clientY = e.changedTouches[0].clientY;
+        } else if (e.clientX !== undefined) {
+            clientX = e.clientX; clientY = e.clientY;
+        } else { return null; }
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+    function findAndSetDraggedBall(x, y) {
+      let closestBallId = null;
+      let minDistanceSq = Infinity;
+      state.balls.forEach(ball => {
+        const dx = x - ball.x; const dy = y - ball.y;
+        const distanceSq = dx * dx + dy * dy;
+        const adjustedRadius = ball.radius * state.radiusFactor;
+        const grabRadius = adjustedRadius * DRAG_SENSITIVITY_MULTIPLIER;
+        const grabRadiusSq = grabRadius * grabRadius;
+        if (distanceSq < grabRadiusSq && distanceSq < minDistanceSq) {
+          minDistanceSq = distanceSq; closestBallId = ball.id;
+        }
+      });
+      state.draggedBallId = closestBallId;
+    }
+    function updateDraggedBallPosition(x, y) {
+        const ball = state.balls.find(b => b.id === state.draggedBallId);
+        if (ball) {
+            const width = canvas.width; const height = canvas.height;
+            const adjustedRadius = ball.radius * state.radiusFactor;
+            ball.x = Math.max(adjustedRadius, Math.min(width - adjustedRadius, x));
+            ball.y = Math.max(adjustedRadius, Math.min(height - adjustedRadius, y));
+        }
+    }
+
+
+    // --- Funciones de los Controles de UI ---
+    // ... (addBall, resetBalls, toggleAnimation, updateToggleButtonIcon, randomizeColors, toggleFullscreen sin cambios)
+     function addBall() {
+      if (!canvas) return;
+      const width = canvas.width; const height = canvas.height;
+      const radius = BASE_BALL_RADIUS_MIN + Math.random() * (BASE_BALL_RADIUS_MAX - BASE_BALL_RADIUS_MIN);
+      const adjustedRadius = radius * state.radiusFactor;
+      const x = adjustedRadius + Math.random() * (width - adjustedRadius * 2);
+      const y = adjustedRadius + Math.random() * (height - adjustedRadius * 2);
+      state.balls.push(createBall(x, y, radius));
+      showInfoBadge('Esfera añadida');
+    }
+    function resetBalls() {
+      createInitialBalls();
+      showInfoBadge('Esferas reiniciadas');
+    }
+     function toggleAnimation() {
+      state.animate = !state.animate;
+      if (state.animate) { state.lastTimestamp = 0; }
+      updateToggleButtonIcon();
+      showInfoBadge(state.animate ? 'Movimiento reanudado' : 'Movimiento pausado');
+    }
+    function updateToggleButtonIcon() { /* ... (sin cambios) ... */
+         let iconSvg, text, title, addClass, removeClass;
+        if (state.animate) {
+            iconSvg = `<svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 15V9M14 15V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/></svg>`;
+            text = 'Pausar'; title = "Pausar el movimiento"; addClass = 'btn-green'; removeClass = 'btn-green-inactive';
+        } else {
+             iconSvg = `<svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 9V15L15 12L10 9Z" fill="currentColor"/><path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/></svg>`;
+            text = 'Reanudar'; title = "Reanudar el movimiento"; addClass = 'btn-green-inactive'; removeClass = 'btn-green';
+        }
+        toggleAnimationBtn.innerHTML = iconSvg + text; toggleAnimationBtn.title = title; toggleAnimationBtn.classList.remove(removeClass); toggleAnimationBtn.classList.add(addClass);
+    }
+     function randomizeColors() {
+      const getRandomColor = () => ({ r: Math.floor(Math.random() * 256), g: Math.floor(Math.random() * 256), b: Math.floor(Math.random() * 256) });
+      state.gradient.start = getRandomColor(); state.gradient.end = getRandomColor();
+      startColorPicker.value = rgbToHex(state.gradient.start.r, state.gradient.start.g, state.gradient.start.b);
+      endColorPicker.value = rgbToHex(state.gradient.end.r, state.gradient.end.g, state.gradient.end.b);
+      showInfoBadge('Colores aleatorios aplicados');
+    }
+    function toggleFullscreen() { /* ... (sin cambios) ... */
+         if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+                fullscreenIconOpen.style.display = 'none'; fullscreenIconExit.style.display = 'block'; fullscreenBtn.title = "Salir de Pantalla Completa";
+            }).catch(err => { console.error(`Error pantalla completa: ${err.message}`); showInfoBadge('No se pudo activar pantalla completa'); });
+        } else {
+             if (document.exitFullscreen) {
+                document.exitFullscreen().catch(err => { console.error(`Error salir pantalla completa: ${err.message}`); showInfoBadge('Error al salir'); });
+            }
+        }
+    }
+     document.addEventListener('fullscreenchange', () => { /* ... (sin cambios) ... */
+        if (!document.fullscreenElement) {
+            fullscreenIconOpen.style.display = 'block'; fullscreenIconExit.style.display = 'none'; fullscreenBtn.title = "Pantalla Completa";
+        } else {
+            fullscreenIconOpen.style.display = 'none'; fullscreenIconExit.style.display = 'block'; fullscreenBtn.title = "Salir de Pantalla Completa";
+        }
+        resizeCanvas();
+    });
+
+    // --- Actualizadores de Estado y UI ---
+    // ... (updateSpeed, updateThreshold, updateRadius, updateQuality y sus ...Label sin cambios)
+    function updateSpeed() { state.speedFactor = parseFloat(speedSlider.value); updateSpeedLabel(); }
+    function updateSpeedLabel() { speedValue.textContent = `${state.speedFactor.toFixed(1)}x`; }
+    function updateThreshold() { state.threshold = parseFloat(thresholdSlider.value); updateDensityLabel(); }
+    function updateDensityLabel() { let densityText; if (state.threshold <= 0.85) densityText = 'Muy Alta'; else if (state.threshold <= 0.95) densityText = 'Alta'; else if (state.threshold <= 1.05) densityText = 'Media'; else if (state.threshold <= 1.15) densityText = 'Baja'; else densityText = 'Muy Baja'; densityValue.textContent = densityText; }
+    function updateRadius() { state.radiusFactor = parseFloat(radiusSlider.value); updateRadiusLabel(); ensureBallsInBounds(); }
+    function updateRadiusLabel() { radiusValue.textContent = `${state.radiusFactor.toFixed(1)}x`; }
+    function updateQuality() { const newQuality = parseInt(qualitySlider.value); if (newQuality !== state.smoothFactor) { state.smoothFactor = newQuality; updateQualityLabel(); offscreenCanvas.width = canvas.width * state.smoothFactor; offscreenCanvas.height = canvas.height * state.smoothFactor; showInfoBadge(`Calidad: ${qualityValue.textContent}`); } }
+    function updateQualityLabel() { let qualityText; if (state.smoothFactor === 1) qualityText = 'Baja (1x)'; else if (state.smoothFactor === 2) qualityText = 'Media (2x)'; else if (state.smoothFactor === 3) qualityText = 'Alta (3x)'; else qualityText = 'Ultra (4x)'; qualityValue.textContent = qualityText; }
+    function updateBackgroundColor() { state.backgroundColor = bgColorPicker.value; }
+    function updateStartColor() { state.gradient.start = hexToRgb(startColorPicker.value); }
+    function updateEndColor() { state.gradient.end = hexToRgb(endColorPicker.value); }
+
+
+    // --- NUEVAS FUNCIONES DE ACTUALIZACIÓN ---
+    function updateGlowIntensity() {
+        state.glowIntensity = parseInt(glowIntensitySlider.value);
+        updateGlowIntensityLabel();
+    }
+    function updateGlowIntensityLabel() {
+        glowIntensityValue.textContent = state.glowIntensity;
+    }
+
+    function updateGlowThreshold() {
+        state.glowThreshold = parseFloat(glowThresholdSlider.value);
+        updateGlowThresholdLabel();
+    }
+    function updateGlowThresholdLabel() {
+        glowThresholdValue.textContent = state.glowThreshold.toFixed(2);
+    }
+
+    function updatePixelation() {
+        state.pixelationFactor = parseInt(pixelationSlider.value);
+        updatePixelationLabel();
+        // Es crucial redimensionar el canvas pixelado AHORA
+        const width = canvas.width;
+        const height = canvas.height;
+        pixelatedCanvas.width = Math.max(1, Math.floor(width / state.pixelationFactor));
+        pixelatedCanvas.height = Math.max(1, Math.floor(height / state.pixelationFactor));
+        // Opcional: Mostrar info
+        // showInfoBadge(`Pixelado: ${pixelationValue.textContent}`);
+    }
+    function updatePixelationLabel() {
+        if (state.pixelationFactor === 1) {
+            pixelationValue.textContent = "1x (Ninguno)";
+        } else {
+            pixelationValue.textContent = `${state.pixelationFactor}x`;
+        }
+    }
+    // --- FIN NUEVAS FUNCIONES ---
+
+    // Actualiza TODAS las etiquetas (llamada en init)
+    function updateAllUILabels() {
+        updateSpeedLabel();
+        updateDensityLabel();
+        updateRadiusLabel();
+        updateQualityLabel();
+        // --- Llamar a las nuevas funciones de etiqueta ---
+        updateGlowIntensityLabel();
+        updateGlowThresholdLabel();
+        updatePixelationLabel();
+        // ---
+    }
+
+    // --- Utilidades ---
+    // ... (showInfoBadge, startAnimation, hexToRgb, rgbToHex sin cambios)
+    function showInfoBadge(message) { if (state.infoTimeoutId) { clearTimeout(state.infoTimeoutId); } infoBadge.textContent = message; infoBadge.classList.add('visible'); state.infoTimeoutId = setTimeout(() => { infoBadge.classList.remove('visible'); state.infoTimeoutId = null; }, INFO_BADGE_DURATION_MS); }
+    function startAnimation() { if (state.animationId) { cancelAnimationFrame(state.animationId); } state.lastTimestamp = 0; state.animationId = requestAnimationFrame(updateAnimation); }
+    function hexToRgb(hex) { hex = hex.replace(/^#/, ''); if (hex.length === 3) { hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2]; } const bigint = parseInt(hex, 16); return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 }; }
+    function rgbToHex(r, g, b) { return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).padStart(6, '0'); }
+
+     // --- Configuración de Event Listeners ---
+    function setupEventListeners() {
+        window.addEventListener('resize', resizeCanvas);
+
+        // Interacción Canvas
+        canvas.addEventListener('mousedown', handleInteractionStart);
+        canvas.addEventListener('touchstart', handleInteractionStart, { passive: false });
+        window.addEventListener('mousemove', handleInteractionMove);
+        window.addEventListener('touchmove', handleInteractionMove, { passive: false });
+        window.addEventListener('mouseup', handleInteractionEnd);
+        window.addEventListener('touchend', handleInteractionEnd);
+        document.addEventListener('mouseleave', handleInteractionEnd);
+
+        // Sliders
+        speedSlider.addEventListener('input', updateSpeed);
+        thresholdSlider.addEventListener('input', updateThreshold);
+        radiusSlider.addEventListener('input', updateRadius);
+        qualitySlider.addEventListener('input', updateQuality);
+        // --- NUEVOS LISTENERS ---
+        glowIntensitySlider.addEventListener('input', updateGlowIntensity);
+        glowThresholdSlider.addEventListener('input', updateGlowThreshold);
+        pixelationSlider.addEventListener('input', updatePixelation);
+        // ---
+
+        // Color Pickers
+        bgColorPicker.addEventListener('input', updateBackgroundColor);
+        startColorPicker.addEventListener('input', updateStartColor);
+        endColorPicker.addEventListener('input', updateEndColor);
+
+        // Botones
+        addBallBtn.addEventListener('click', addBall);
+        resetBtn.addEventListener('click', resetBalls);
+        toggleAnimationBtn.addEventListener('click', toggleAnimation);
+        randomColorsBtn.addEventListener('click', randomizeColors);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+    }
+
+    // --- Punto de Entrada ---
+    document.addEventListener('DOMContentLoaded', init);
+
+  </script>
+</body>
+</html>

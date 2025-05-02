@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XocoBalls - Interfaz Integrada (Geometría Original)</title>
+    <!-- Incluir Paper.js -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
+    <style>
+        /* --- Estilos CSS (iguales) --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; height: 100vh; width: 100vw; background-color: #000; color: #fff; position: relative; }
+        canvas#metaballsCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; cursor: default; -webkit-user-drag: none; user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); }
+        .ui-container { position: absolute; bottom: 0; left: 0; width: 100%; z-index: 10; padding: 20px; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%); transition: transform 0.3s ease; transform: translateY(75%); max-height: 90vh; overflow-y: auto; }
+        .ui-container:hover, .ui-container:focus-within { transform: translateY(0); }
+        .ui-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; cursor: pointer; }
+        .ui-title { font-size: 1.5rem; font-weight: 700; }
+        .controls-hint { font-size: 0.875rem; color: rgba(255, 255, 255, 0.6); display: flex; align-items: center; gap: 8px; }
+        .arrow-icon { width: 20px; height: 20px; transition: transform 0.3s ease; }
+        .ui-container:hover .arrow-icon, .ui-container:focus-within .arrow-icon { transform: rotate(180deg); }
+        .controls-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; align-items: flex-start; }
+        .control-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; gap: 8px; }
+        .control-group-inline { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 150px; margin-bottom: 8px; }
+        .control-label { font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.8); display: flex; justify-content: space-between; white-space: nowrap; margin-right: 8px; }
+        .control-label span { margin-left: auto; }
+        .control-value { color: rgba(255, 255, 255, 0.6); font-size: 0.75rem; margin-left: 4px; }
+        .slider { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; background: rgba(255, 255, 255, 0.2); border-radius: 2px; outline: none; transition: background 0.2s; cursor: pointer; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+        .slider::-moz-range-thumb { width: 16px; height: 16px; border: none; border-radius: 50%; background: #3b82f6; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+        .slider:hover::-webkit-slider-thumb, .slider:hover::-moz-range-thumb { transform: scale(1.2); }
+        .slider:active::-webkit-slider-thumb, .slider:active::-moz-range-thumb { transform: scale(1.3); background: #2563eb; }
+        .color-picker { -webkit-appearance: none; appearance: none; width: 32px; height: 32px; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 50%; cursor: pointer; background: transparent; padding: 0; overflow: hidden; flex-shrink: 0; }
+        .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-picker::-webkit-color-swatch { border: none; border-radius: 50%; }
+        .color-picker::-moz-color-swatch { border: none; border-radius: 50%; }
+        .button-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: white; outline: none; flex-grow: 1; flex-basis: 150px; }
+        .btn:focus-visible { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4); }
+        .btn-icon { width: 16px; height: 16px; flex-shrink: 0; }
+        .btn-blue { background-color: #3b82f6; } .btn-blue:hover { background-color: #2563eb; }
+        .btn-gray { background-color: #6b7280; } .btn-gray:hover { background-color: #4b5563; }
+        .btn-green { background-color: #10b981; } .btn-green:hover { background-color: #059669; }
+        .btn-green-inactive { background-color: #18181b; color: #71717a; } .btn-green-inactive:hover { background-color: #27272a; }
+        .btn-purple { background-color: #8b5cf6; } .btn-purple:hover { background-color: #7c3aed; }
+        .info-badge { position: absolute; top: 20px; right: 20px; padding: 8px 16px; background-color: rgba(0, 0, 0, 0.7); border-radius: 8px; font-size: 0.875rem; z-index: 20; color: rgba(255, 255, 255, 0.9); pointer-events: none; opacity: 0; transform: translateY(-10px); transition: opacity 0.3s ease, transform 0.3s ease; }
+        .info-badge.visible { opacity: 1; transform: translateY(0); }
+        .fullscreen-btn { position: absolute; top: 20px; left: 20px; z-index: 20; background-color: rgba(0, 0, 0, 0.6); border: none; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; outline: none; }
+        .fullscreen-btn:focus-visible { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4); }
+        .fullscreen-btn:hover { background-color: rgba(0, 0, 0, 0.8); }
+        .fullscreen-icon { width: 20px; height: 20px; fill: white; }
+         @media (max-width: 768px) {
+           .ui-container { padding: 16px; transform: translateY(85%); }
+           .ui-title { font-size: 1.25rem; }
+           .controls-hint span { font-size: 0.8rem; }
+           .control-group { min-width: 150px; }
+           .control-group-inline { min-width: 130px; }
+           .btn { flex-basis: 120px; padding: 8px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas resize="true" id="metaballsCanvas"></canvas>
+
+    <button id="fullscreenBtn" class="fullscreen-btn" title="Pantalla Completa">
+        <svg class="fullscreen-icon" id="fullscreenIconOpen" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        <svg class="fullscreen-icon" id="fullscreenIconExit" style="display: none;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+    </button>
+
+    <div id="infoBadge" class="info-badge">Configuración actualizada</div>
+
+    <div class="ui-container" tabindex="-1">
+        <div class="ui-header">
+            <h2 class="ui-title">XocoBalls</h2>
+            <div class="controls-hint">
+                <span>Pasa el cursor o desliza</span>
+                <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 15L12 9L18 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+        </div>
+
+        <!-- Fila 1: Velocidad y Fusión -->
+        <div class="controls-row">
+            <div class="control-group">
+                <div class="control-label">
+                    <label for="speedSlider">Velocidad</label>
+                    <span class="control-value" id="speedValue">1.0x</span>
+                </div>
+                <input type="range" id="speedSlider" class="slider" min="0.1" max="6.0" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+                <div class="control-label">
+                    <label for="fusionSlider">Fusión</label>
+                    <span class="control-value" id="fusionValue">0.5</span>
+                </div>
+                <input type="range" id="fusionSlider" class="slider" min="0.1" max="1.0" step="0.05" value="0.5">
+            </div>
+        </div>
+
+        <!-- Fila 2: Colores -->
+        <div class="controls-row">
+             <div class="control-group-inline">
+                 <label for="bgColorPicker" class="control-label">Fondo</label>
+                 <input type="color" id="bgColorPicker" class="color-picker" value="#000000" title="Color de fondo">
+             </div>
+             <div class="control-group-inline">
+                 <label for="fillColorPicker" class="control-label">Color</label>
+                 <input type="color" id="fillColorPicker" class="color-picker" value="#32c8ff" title="Color de las esferas y conexiones">
+             </div>
+             <div class="control-group" style="opacity: 0; pointer-events: none; min-width: 200px;"></div>
+        </div>
+
+        <!-- Fila 3: Botones -->
+        <div class="button-row">
+             <button id="addBallBtn" class="btn btn-blue" title="Añadir una nueva esfera aleatoria"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6V12M12 12V18M12 12H18M12 12H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Añadir</button>
+             <button id="resetBtn" class="btn btn-gray" title="Restablecer esferas a la posición inicial"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4V10H7M23 20V14H17M3.51 9C5.84 4.35 11.15 2.11 16.5 4.44C20.2 6.05 22.5 9.72 22.5 13.72M20.49 15C18.16 19.65 12.85 21.89 7.5 19.56C3.8 17.95 1.5 14.28 1.5 10.28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Reiniciar</button>
+             <button id="toggleAnimationBtn" class="btn btn-green" title="Pausar o reanudar el movimiento">Pausar</button>
+             <button id="randomColorsBtn" class="btn btn-purple" title="Generar color aleatorio para las formas"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.364 5.63604C19.9261 7.19815 20.8787 9.28986 20.8787 11.5C20.8787 13.7101 19.9261 15.8019 18.364 17.364M15.5355 8.46447C16.3166 9.24552 16.7429 10.3359 16.7429 11.5C16.7429 12.6641 16.3166 13.7545 15.5355 14.5355M3 11.5C3 7.02166 6.10691 3.35266 10.1213 2.63604M6.63604 2.63604C8.19815 1.07393 10.2899 0.121338 12.5 0.121338C17.7467 0.121338 22 4.37464 22 9.62134V10.5M22 13.5V14.3787C22 19.6254 17.7467 23.8787 12.5 23.8787C10.2899 23.8787 8.19815 22.9261 6.63604 21.364L3 17.7279" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.0503 5.94975L18.1716 3.82843" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11.5L6.63604 15.136" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Aleatorio</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Estado Global ---
+            const state = { /* ... (igual que la versión anterior) ... */
+                balls: [], draggedBall: null, animate: true, speedFactor: 1.0, fusionFactor: 0.5,
+                backgroundColor: "#000000", fillColor: "#32c8ff", infoTimeoutId: null, isDragging: false,
+                connectionsGroup: null, handleLenRate: 2.4, maxDistance: 400,
+             };
+
+            // --- Referencias DOM ---
+             const canvas = document.getElementById('metaballsCanvas'); /* ... (resto igual) ... */
+             const fullscreenBtn = document.getElementById('fullscreenBtn'); const fullscreenIconOpen = document.getElementById('fullscreenIconOpen'); const fullscreenIconExit = document.getElementById('fullscreenIconExit'); const toggleAnimationBtn = document.getElementById('toggleAnimationBtn'); const infoBadge = document.getElementById('infoBadge'); const speedSlider = document.getElementById('speedSlider'); const speedValue = document.getElementById('speedValue'); const fusionSlider = document.getElementById('fusionSlider'); const fusionValue = document.getElementById('fusionValue'); const bgColorPicker = document.getElementById('bgColorPicker'); const fillColorPicker = document.getElementById('fillColorPicker'); const addBallBtn = document.getElementById('addBallBtn'); const resetBtn = document.getElementById('resetBtn'); const randomColorsBtn = document.getElementById('randomColorsBtn');
+
+            // --- Constantes ---
+            const BASE_BALL_RADIUS_MIN = 30; const BASE_BALL_RADIUS_MAX = 70; const INITIAL_VELOCITY_RANGE = 1.2; const INFO_BADGE_DURATION_MS = 2000; const INITIAL_BALL_COUNT = 5;
+
+            // --- Inicialización ---
+            function init() { /* ... (igual) ... */
+                 paper.setup(canvas); state.connectionsGroup = new paper.Group(); updateBackgroundColor(); createInitialBalls(); setupEventListeners(); updateAllUILabels(); updateToggleButtonIcon(); paper.view.onFrame = updateAnimation; paper.view.onResize = onPaperResize; applyFillColor();
+             }
+
+            // --- Creación/Manejo de Bolas ---
+             function createInitialBalls() { /* ... (igual) ... */
+                 state.balls = []; paper.project.activeLayer.removeChildren(); paper.project.activeLayer.addChild(state.connectionsGroup);
+                 for (let i = 0; i < INITIAL_BALL_COUNT; i++) { addBallInternal(true); }
+                 if (state.balls.length >= 2) { generateConnections(state.balls); }
+             }
+             function createBall(x, y, radius) { /* ... (igual) ... */
+                 const ball = new paper.Path.Circle({ center: [x, y], radius: radius, fillColor: state.fillColor, applyMatrix: false });
+                 ball.vx = (Math.random() - 0.5) * INITIAL_VELOCITY_RANGE; ball.vy = (Math.random() - 0.5) * INITIAL_VELOCITY_RANGE;
+                 ball.onMouseDown = (event) => { if (event.event.button !== 0) return; state.draggedBall = ball; state.isDragging = true; canvas.style.cursor = 'grabbing'; };
+                 ball.onMouseDrag = (event) => { if (state.draggedBall === ball) { ball.position = ball.position.add(event.delta); keepBallInBounds(ball); if(state.balls.length >= 2) generateConnections(state.balls); } };
+                 ball.onMouseEnter = () => { if (!state.isDragging) canvas.style.cursor = 'grab'; }; ball.onMouseLeave = () => { if (!state.isDragging) canvas.style.cursor = 'default'; }; return ball;
+             }
+             function addBallInternal(isInitial = false) { /* ... (igual) ... */
+                 const viewSize = paper.view.size; const radius = BASE_BALL_RADIUS_MIN + Math.random() * (BASE_BALL_RADIUS_MAX - BASE_BALL_RADIUS_MIN); const x = radius + Math.random() * (viewSize.width - radius * 2); const y = radius + Math.random() * (viewSize.height - radius * 2); const newBall = createBall(x, y, radius); state.balls.push(newBall);
+                 if (!isInitial) { if (state.balls.length >= 2) generateConnections(state.balls); showInfoBadge('Esfera añadida'); }
+             }
+             function addBall() { addBallInternal(false); }
+             function resetBalls() { /* ... (igual) ... */
+                 state.balls.forEach(ball => ball.remove()); state.balls = []; state.connectionsGroup.removeChildren(); createInitialBalls(); applyFillColor(); showInfoBadge('Esferas reiniciadas');
+             }
+             function keepBallInBounds(ball) { /* ... (igual) ... */
+                 const viewBounds = paper.view.bounds; const radius = ball.bounds.width / 2; if (radius <=0) return;
+                 ball.position.x = Math.max(radius, Math.min(viewBounds.width - radius, ball.position.x)); ball.position.y = Math.max(radius, Math.min(viewBounds.height - radius, ball.position.y));
+             }
+
+            // --- Bucle de Animación ---
+            function updateAnimation(event) { /* ... (igual) ... */
+                const dt = event.delta * 60; if (state.animate) { updateBallPositionsPaper(dt); }
+                if (state.animate && state.balls.length >= 2 && !state.isDragging) { generateConnections(state.balls); }
+            }
+
+            // --- Actualización de Posición ---
+            function updateBallPositionsPaper(dt) { /* ... (igual) ... */
+                 const viewBounds = paper.view.bounds; state.balls.forEach(ball => { if (state.draggedBall === ball) return; ball.position = ball.position.add( new paper.Point(ball.vx, ball.vy).multiply(state.speedFactor * dt) ); const radius = ball.bounds.width / 2; if (radius <= 0) return; if (ball.position.x < radius || ball.position.x > viewBounds.width - radius) { ball.vx *= -1; ball.position.x = Math.max(radius, Math.min(viewBounds.width - radius, ball.position.x)); } if (ball.position.y < radius || ball.position.y > viewBounds.height - radius) { ball.vy *= -1; ball.position.y = Math.max(radius, Math.min(viewBounds.height - radius, ball.position.y)); } });
+             }
+
+            // --- Lógica Metaball (Paper.js) ---
+            function generateConnections(paths) { /* ... (igual) ... */
+                state.connectionsGroup.removeChildren();
+                for (var i = 0; i < paths.length; i++) {
+                    for (var j = i - 1; j >= 0; j--) { var path = metaball(paths[i], paths[j], state.fusionFactor, state.handleLenRate, state.maxDistance, state.fillColor); if (path) { state.connectionsGroup.addChild(path); } } }
+            }
+
+            // ***** CORRECCIÓN EN EL CÁLCULO DEL MANEJADOR *****
+            function metaball(ball1, ball2, v, handle_len_rate, maxDistance, fillColor) {
+                 const center1 = ball1.position; const center2 = ball2.position; const radius1 = ball1.bounds.width / 2; const radius2 = ball2.bounds.width / 2;
+                 if (radius1 <= 0 || radius2 <= 0) return null;
+                 var pi2 = Math.PI / 2; var d = center1.getDistance(center2); var u1 = 0, u2 = 0;
+                 if (d > maxDistance || d < 0.1 || d <= Math.abs(radius1 - radius2)) { return null; }
+                 if (d < radius1 + radius2) {
+                     const acosArg1 = Math.max(-1, Math.min(1, (radius1 * radius1 + d * d - radius2 * radius2) / (2 * radius1 * d))); const acosArg2 = Math.max(-1, Math.min(1, (radius2 * radius2 + d * d - radius1 * radius1) / (2 * radius2 * d)));
+                     u1 = Math.acos(acosArg1); u2 = Math.acos(acosArg2); }
+                 if (d < 0.0001) return null;
+                 const angleTangentOffset = Math.acos(Math.max(-1, Math.min(1, (radius1 - radius2) / d)));
+                 var angleBetweenCenters = (center2.subtract(center1)).angleInRadians;
+                 var angle1a = angleBetweenCenters + u1 + (angleTangentOffset - u1) * v; var angle1b = angleBetweenCenters - u1 - (angleTangentOffset - u1) * v; var angle2a = angleBetweenCenters + Math.PI - u2 - (Math.PI - u2 - angleTangentOffset) * v; var angle2b = angleBetweenCenters - Math.PI + u2 + (Math.PI - u2 - angleTangentOffset) * v;
+                 var p1a = center1.add(getVector(angle1a, radius1)); var p1b = center1.add(getVector(angle1b, radius1)); var p2a = center2.add(getVector(angle2a, radius2)); var p2b = center2.add(getVector(angle2b, radius2));
+                 var totalRadius = (radius1 + radius2); if (totalRadius < 0.0001) return null;
+                 var handleDistance = p1a.getDistance(p2a); // Distancia entre puntos tangentes
+
+                 // --- CÁLCULO ORIGINAL DE handleScaleFactor ---
+                 var handleScaleFactor = Math.min(v * handle_len_rate, handleDistance / totalRadius);
+                 handleScaleFactor *= Math.min(1, d * 2 / totalRadius);
+                 // --- FIN CÁLCULO ORIGINAL ---
+
+                 var handleRadius1 = radius1 * handleScaleFactor; // Usar handleScaleFactor directamente
+                 var handleRadius2 = radius2 * handleScaleFactor; // Usar handleScaleFactor directamente
+
+                 var segments = [ new paper.Segment(p1a, null, getVector(angle1a - pi2, handleRadius1)), new paper.Segment(p2a, getVector(angle2a + pi2, handleRadius2), null), new paper.Segment(p2b, null, getVector(angle2b - pi2, handleRadius2)), new paper.Segment(p1b, getVector(angle1b + pi2, handleRadius1), null) ];
+                 if (segments.some(seg => isNaN(seg.point.x) || isNaN(seg.point.y) || (seg.handleIn && (isNaN(seg.handleIn.x) || isNaN(seg.handleIn.y))) || (seg.handleOut && (isNaN(seg.handleOut.x) || isNaN(seg.handleOut.y))))) { return null; }
+                 var path = new paper.Path({ segments: segments, fillColor: fillColor, closed: true });
+                 return path;
+            }
+            // ***** FIN CORRECCIÓN *****
+
+
+            function getVector(radians, length) { /* ... (igual, ya corregido) ... */
+                 const degrees = radians * (180 / Math.PI); return new paper.Point({ angle: degrees, length: length });
+             }
+
+            // --- Manejo de Redimensionado ---
+            function onPaperResize(event) { /* ... (igual) ... */
+                state.balls.forEach(ball => keepBallInBounds(ball)); if (state.balls.length >= 2) { generateConnections(state.balls); } paper.view.requestUpdate();
+            }
+
+            // --- Funciones UI y Controles ---
+            function toggleAnimation() { /* ... (igual) ... */
+                 state.animate = !state.animate; updateToggleButtonIcon(); showInfoBadge(state.animate ? 'Movimiento reanudado' : 'Movimiento pausado'); if(state.animate) paper.view.play(); else paper.view.pause();
+             }
+             function updateToggleButtonIcon() { /* ... (igual) ... */
+                  let iconSvg, text, title, addClass, removeClass; if (state.animate) { iconSvg = `<svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 15V9M14 15V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/></svg>`; text = 'Pausar'; title = "Pausar el movimiento"; addClass = 'btn-green'; removeClass = 'btn-green-inactive'; } else { iconSvg = `<svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 9V15L15 12L10 9Z" fill="currentColor"/><path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2"/></svg>`; text = 'Reanudar'; title = "Reanudar el movimiento"; addClass = 'btn-green-inactive'; removeClass = 'btn-green'; } toggleAnimationBtn.innerHTML = iconSvg + text; toggleAnimationBtn.title = title; toggleAnimationBtn.classList.remove(removeClass); toggleAnimationBtn.classList.add(addClass);
+             }
+             function randomizeColors() { /* ... (igual) ... */
+                 const r = Math.floor(Math.random() * 256); const g = Math.floor(Math.random() * 256); const b = Math.floor(Math.random() * 256); const hexColor = rgbToHex(r, g, b); state.fillColor = hexColor; fillColorPicker.value = hexColor; applyFillColor(); showInfoBadge('Color aleatorio aplicado');
+             }
+             function applyFillColor() { /* ... (igual) ... */
+                  state.balls.forEach(ball => ball.fillColor = state.fillColor); state.connectionsGroup.fillColor = state.fillColor;
+             }
+             function toggleFullscreen() { /* ... (igual) ... */
+                 if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => { console.error(err); showInfoBadge('No se pudo activar pantalla completa'); }); } else { if (document.exitFullscreen) { document.exitFullscreen().catch(err => { console.error(err); showInfoBadge('Error al salir'); }); } }
+             }
+             document.addEventListener('fullscreenchange', () => { /* ... (igual) ... */
+                 const isFullscreen = !!document.fullscreenElement; fullscreenIconOpen.style.display = isFullscreen ? 'none' : 'block'; fullscreenIconExit.style.display = isFullscreen ? 'block' : 'none'; fullscreenBtn.title = isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"; setTimeout(() => paper.view.requestUpdate(), 100);
+             });
+
+            // --- Actualizadores de Estado y UI ---
+            function updateSpeed() { state.speedFactor = parseFloat(speedSlider.value); updateSpeedLabel(); }
+            function updateSpeedLabel() { speedValue.textContent = `${state.speedFactor.toFixed(1)}x`; }
+            function updateFusion() { state.fusionFactor = parseFloat(fusionSlider.value); updateFusionLabel(); if(state.balls.length >= 2) generateConnections(state.balls);}
+            function updateFusionLabel() { fusionValue.textContent = state.fusionFactor.toFixed(2); }
+            function updateBackgroundColor() { state.backgroundColor = bgColorPicker.value; canvas.style.backgroundColor = state.backgroundColor; }
+            function updateFillColor() { state.fillColor = fillColorPicker.value; applyFillColor(); }
+            function updateAllUILabels() { updateSpeedLabel(); updateFusionLabel(); }
+
+            // --- Utilidades ---
+            function showInfoBadge(message) { /* ... (igual) ... */ if (state.infoTimeoutId) { clearTimeout(state.infoTimeoutId); } infoBadge.textContent = message; infoBadge.classList.add('visible'); state.infoTimeoutId = setTimeout(() => { infoBadge.classList.remove('visible'); state.infoTimeoutId = null; }, INFO_BADGE_DURATION_MS); }
+            function rgbToHex(r, g, b) { /* ... (igual) ... */ return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).padStart(6, '0'); }
+
+             // --- Configuración de Event Listeners ---
+            function setupEventListeners() { /* ... (igual que la versión anterior) ... */
+                 speedSlider.addEventListener('input', updateSpeed); fusionSlider.addEventListener('input', updateFusion);
+                 bgColorPicker.addEventListener('input', updateBackgroundColor); fillColorPicker.addEventListener('input', updateFillColor);
+                 addBallBtn.addEventListener('click', addBall); resetBtn.addEventListener('click', resetBalls); toggleAnimationBtn.addEventListener('click', toggleAnimation); randomColorsBtn.addEventListener('click', randomizeColors); fullscreenBtn.addEventListener('click', toggleFullscreen);
+                 const endDrag = (event) => { if (state.isDragging) { state.isDragging = false; const draggedBefore = state.draggedBall; state.draggedBall = null; let finalCursor = 'default'; let currentPoint = null; try { const eventX = event.clientX ?? event.changedTouches?.[0]?.clientX; const eventY = event.clientY ?? event.changedTouches?.[0]?.clientY; if (eventX !== undefined && eventY !== undefined) { const viewPoint = paper.view.viewToProject(new paper.Point(eventX, eventY)); if(viewPoint && !isNaN(viewPoint.x)){ currentPoint = viewPoint; } } } catch (e) { /* Ignorar */ } if (currentPoint) { const hitResult = paper.project.hitTest(currentPoint, { fill: true, tolerance: 5 }); if (hitResult && hitResult.item && state.balls.includes(hitResult.item)) { finalCursor = 'grab'; } } else if (draggedBefore && draggedBefore.bounds.contains(draggedBefore.position)) { finalCursor = 'grab'; } canvas.style.cursor = finalCursor; } };
+                 window.addEventListener('mouseup', endDrag); window.addEventListener('touchend', endDrag); document.addEventListener('mouseleave', endDrag);
+            }
+
+            // --- Iniciar Todo ---
+            init();
+        });
+    </script>
+</body>
+</html>
